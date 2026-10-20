@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Steady Lab</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <h1>Steady</h1>
+  <span class="sub">testing &amp; study bench</span> <a class="sub" href="draw.html">Open drawing app</a>
+  <nav>
+    <button id="modeFree" class="tab on">Free play</button>
+    <button id="modeStudy" class="tab">Study</button>
+  </nav>
+</header>
+<main>
+  <aside>
+    <section id="secFilter">
+      <h2>Filter</h2>
+      <label>Filter
+        <select id="filterSel">
+          <option value="raw">raw</option>
+          <option value="ema">ema (2 Hz)</option>
+          <option value="one_euro">one-euro</option>
+          <option value="steady" selected>steady (v2: oscillator bank)</option>
+          <option value="steady_v1">steady v1 (old, free play only)</option>
+        </select>
+      </label>
+      <label class="chk"><input type="checkbox" id="showRaw" checked> show raw stroke (grey)</label>
+      <label id="guideLbl">Guide template
+        <select id="guideSel"><option value="none">none</option><option value="spiral">spiral (3 turns)</option><option value="line">line</option><option value="square">square</option></select></label>
+      <dl class="readout">
+        <dt>Tremor f0</dt><dd id="roF0">-</dd>
+        <dt>Confidence</dt><dd id="roConf">-</dd>
+        <dt>Mode</dt><dd id="roMode">-</dd>
+        <dt>Lag (est.)</dt><dd id="roLag">-</dd>
+        <dt>Sample rate</dt><dd id="roFs">-</dd>
+      </dl>
+      <div class="bar"><div id="confBar"></div></div>
+      <button id="btnClear">Clear canvas</button>
+    </section>
+
+    <section id="secTremor">
+      <h2>Synthetic tremor</h2>
+      <label class="chk"><input type="checkbox" id="synOn"> inject into pointer stream</label>
+      <label>Frequency <output id="synHzO">6.0</output> Hz
+        <input type="range" id="synHz" min="3" max="12" step="0.1" value="6"></label>
+      <label>Amplitude <output id="synMmO">1.5</output> mm
+        <input type="range" id="synMm" min="0" max="4" step="0.1" value="1.5"></label>
+    </section>
+
+    <section id="secCal">
+      <h2>Calibration</h2>
+      <label>mm per CSS pixel
+        <input type="number" id="mmPerPx" min="0.05" max="2" step="0.0001" value="0.2646"></label>
+      <div class="row">
+        <button id="calReset">96 px/in</button>
+        <button id="calCard">Calibrate with card</button>
+      </div>
+      <p class="hint" id="calHint">Default 0.2646 mm/px (96 px/in). Calibrate so the template matches real size.</p>
+    </section>
+
+    <section id="secStudy" hidden>
+      <h2>Study</h2>
+      <div id="studySetup">
+        <label>Participant ID <input type="text" id="pid" maxlength="40" placeholder="e.g. P01" autocomplete="off"></label>
+        <label>Latin-square row
+          <select id="rowSel"><option value="auto">auto (from ID)</option><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+        <label>Repetitions per task <input type="number" id="reps" min="1" max="5" value="1"></label>
+        <label class="chk"><input type="checkbox" id="autoDl" checked> auto-download CSV after each trial</label>
+        <label class="chk"><input type="checkbox" id="studyRaw"> show raw trace to participant</label>
+        <button id="btnStart" class="primary">Start study</button>
+      </div>
+      <div id="studyRun" hidden>
+        <div id="stProgress" class="prog"></div>
+        <p id="stTask" class="task"></p>
+        <div class="row">
+          <button id="btnDone" class="primary">Done - save trial</button>
+          <button id="btnRedo">Redo</button>
+        </div>
+        <pre id="stMetrics" class="metrics"></pre>
+        <div id="stRating" hidden>
+          <p>How much control did you have? (0 = none, 10 = full)</p>
+          <input type="range" id="ratingSl" min="0" max="10" step="1" value="5">
+          <output id="ratingO">5</output>
+          <button id="btnRate" class="primary">Save rating &amp; continue</button>
+        </div>
+        <div id="stDone" hidden><p><b>Study complete.</b> Download the summary below.</p></div>
+        <div class="row">
+          <button id="btnSummary">Download summary CSV</button>
+          <button id="btnAll">Download all trial CSVs</button>
+        </div>
+        <button id="btnAbort">End session</button>
+        <ul id="trialList" class="list"></ul>
+      </div>
+    </section>
+
+    <section id="secSerial">
+      <h2>Pen (Web Serial)</h2>
+      <p class="hint" id="serialNote"></p>
+      <div class="row">
+        <button id="btnConnect">Connect</button>
+        <button id="btnPing" disabled>Ping</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="motorMirror" disabled> drive motor with synthetic tremor settings</label>
+      <label>Plot
+        <select id="imuGroup"><option value="accel">accel (g)</option><option value="gyro">gyro (deg/s)</option></select></label>
+      <canvas id="imuCanvas" width="300" height="90"></canvas>
+      <pre id="serialLog" class="log"></pre>
+    </section>
+  </aside>
+  <section class="stage">
+    <div id="banner"></div>
+    <canvas id="draw"></canvas>
+  </section>
+</main>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

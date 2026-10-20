@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Steady</title>
+<link rel="stylesheet" href="css/draw.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
+  <symbol id="i-clear" viewBox="0 0 24 24"><path d="M5 7h14"/><path d="M10 4h4"/><path d="M7 7l1 13h8l1-13"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></symbol>
+  <symbol id="i-brush" viewBox="0 0 24 24"><path d="M4 20c2.5 0 4-1.2 4-3.2 0-1.3 1-2.3 2.3-2.3"/><path d="M10.3 14.5 19 5.8a1.4 1.4 0 0 0-2-2L8.4 12.6"/><path d="M8.4 12.6c-1.2.2-2 1.1-2 2.3"/></symbol>
+  <symbol id="i-eraser" viewBox="0 0 24 24"><path d="m8 20-4-4 10-10 6 6-8 8z"/><path d="M8 20h12"/><path d="m9 11 6 6"/></symbol>
+</svg>
+
+<canvas id="ghost" aria-hidden="true"></canvas>
+<canvas id="ink" aria-label="Drawing canvas"></canvas>
+
+<header class="top" data-ui>
+  <div class="brand">
+    <span class="mark">Steady</span>
+    <span id="status" class="status" aria-live="polite">Tremor filter on</span>
+  </div>
+  <div class="actions">
+    <button id="undo" class="icon" title="Undo (Ctrl/Cmd+Z)" aria-label="Undo"><svg><use href="#i-undo"/></svg><span>Undo</span></button>
+    <button id="redo" class="icon" title="Redo (Shift+Ctrl/Cmd+Z)" aria-label="Redo"><svg><use href="#i-redo"/></svg><span>Redo</span></button>
+    <button id="clear" class="icon" title="Clear the page" aria-label="Clear"><svg><use href="#i-clear"/></svg><span id="clearLbl">Clear</span></button>
+    <button id="save" class="icon" title="Save as PNG" aria-label="Save as PNG"><svg><use href="#i-save"/></svg><span>Save</span></button>
+    <button id="demoBtn" class="icon keep" aria-haspopup="true" aria-expanded="false" title="Demonstration settings"><span>Demo</span></button>
+  </div>
+</header>
+
+<nav class="dock" data-ui aria-label="Tools">
+  <button id="steady" class="steady" role="switch" aria-checked="true" title="Turn the tremor filter on or off (S)">
+    <span class="knob" aria-hidden="true"></span><span class="lbl">Steady</span><span id="steadyState" class="state">On</span>
+  </button>
+  <span class="sep" aria-hidden="true"></span>
+  <button id="toolBrush" class="tool on" aria-pressed="true" title="Brush (B)" aria-label="Brush"><svg><use href="#i-brush"/></svg></button>
+  <button id="toolEraser" class="tool" aria-pressed="false" title="Eraser (E)" aria-label="Eraser"><svg><use href="#i-eraser"/></svg></button>
+  <button id="colorBtn" class="tool" aria-haspopup="true" aria-expanded="false" title="Colour" aria-label="Colour"><span id="colorChip" class="chip"></span></button>
+  <button id="sizeBtn" class="tool" aria-haspopup="true" aria-expanded="false" title="Brush size ([ and ])" aria-label="Brush size"><span id="sizeDot" class="dot"></span></button>
+</nav>
+
+<div id="colorPop" class="pop" role="dialog" aria-label="Colour" hidden><div class="swatches" id="swatches"></div></div>
+<div id="sizePop" class="pop" role="dialog" aria-label="Brush size" hidden><div class="sizes" id="sizes"></div></div>
+<div id="demoPop" class="pop demo" role="dialog" aria-label="Demonstration settings" hidden>
+  <p class="pop-title">Demonstration</p>
+  <p class="pop-note">Adds an artificial shake to your input so you can see what Steady removes. Leave it off for real use.</p>
+  <button id="synOn" class="row-switch" role="switch" aria-checked="false"><span>Simulate tremor</span><span class="mini"><span class="knob"></span></span></button>
+  <div class="stepper"><span>Rhythm</span><button id="hzDown" aria-label="Slower shake">&minus;</button><output id="hzOut">6.0 Hz</output><button id="hzUp" aria-label="Faster shake">+</button></div>
+  <div class="stepper"><span>Size</span><button id="mmDown" aria-label="Smaller shake">&minus;</button><output id="mmOut">1.5 mm</output><button id="mmUp" aria-label="Larger shake">+</button></div>
+  <button id="ghostOn" class="row-switch" role="switch" aria-checked="false"><span>Show the raw, shaky line</span><span class="mini"><span class="knob"></span></span></button>
+  <p class="pop-foot"><a href="lab.html">Open the lab</a> for measurements and studies.</p>
+</div>
+
+<script type="module" src="js/draw.js"></script>
+</body>
+</html>
