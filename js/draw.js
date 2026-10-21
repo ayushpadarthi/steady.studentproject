@@ -1,6 +1,7 @@
 // Steady drawing app. Uses the SAME filter code as the lab (js/filters.js), so study results apply to it.
 import { Filter2D } from './filters.js';
 import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js';
+import { adaptiveParams, adaptiveSettle } from './settle.js';
 
 const $ = (id) => document.getElementById(id);
 const MM_PER_PX = 0.2646; // same default as the lab (96 px/in); the filter's parameters are in millimetres
@@ -18,11 +19,18 @@ const DEMO_PRESETS = [
   ['et_severe', 'ET severe', 'Large, slower shake; very hard to draw'],
   ['pd_rest', "Parkinson's rest", 'Fades while moving, returns when you pause'],
 ];
+// Smoothing after the pen lifts ("ink settling", js/settle.js). k scales the detected tremor frequency.
+const SMOOTH = [
+  ['off', 'Off', 'The line stays exactly as drawn', null],
+  ['smooth', 'Smooth', 'Each stroke settles when you lift the pen', 0.5],
+  ['extra', 'Extra smooth', 'Settles more; small details get rounder', 0.35],
+];
+const SETTLE_MS = 220; // length of the settling animation
 
 // ---------------------------------------------------------------- state
 const S = {
   steady: true, tool: 'brush', color: COLORS[0][1], size: 4,
-  syn: { on: false, preset: 'et_moderate' }, ghost: false,
+  syn: { on: false, preset: 'et_moderate' }, ghost: false, smooth: 'smooth',
   strokes: [], history: [], redo: [],   // history items: {kind:'stroke', stroke} | {kind:'clear', removed:[...]}
   cur: null, pointerId: null, sawPen: false, lastT: -Infinity,
   w: 0, h: 0, dpr: 1,
@@ -32,7 +40,8 @@ load();
 // It is fed even when Steady is switched off, so switching it back on is instantly warm.
 const steadyF = new Filter2D('steady');
 // Same speed-dependent tremor generator as the lab (one instance, continuous in time across strokes).
-const tremorGen = makeTremor(S.syn.preset, {}, 20240607), speedEst = new SpeedEstimator(0.08);
+// Seeded differently on every page load, so the demo shake is never the same twice.
+const tremorGen = makeTremor(S.syn.preset, {}, (Date.now() ^ Math.floor(Math.random() * 2 ** 31)) >>> 0), speedEst = new SpeedEstimator(0.08);
 
 // ---------------------------------------------------------------- canvases
 const ink = $('ink'), ghost = $('ghost');
@@ -107,6 +116,7 @@ function ingest(ev) {
   const s = S.cur;
   const wRaw = widthFor(ev);
   s.wSm = s.wSm == null ? wRaw : s.wSm * 0.7 + wRaw * 0.3; // soften pressure jitter
+  s.t.push(t);
   s.raw.push({ x: xm / MM_PER_PX, y: ym / MM_PER_PX, w: s.wSm });
   s.pts.push({ x: (useF ? fx : xm) / MM_PER_PX, y: (useF ? fy : ym) / MM_PER_PX, w: s.wSm });
   drawStrokeTail(ictx, s, s.pts, s.pts.length - 1, false);
@@ -125,7 +135,7 @@ ink.addEventListener('pointerdown', (e) => {
   S.pointerId = e.pointerId;
   speedEst.reset();
   steadyF.startStroke();                                   // keeps the learned tremor, restarts the line
-  S.cur = { tool: S.tool, color: S.color, steady: S.steady, pts: [], raw: [], wSm: null };
+  S.cur = { tool: S.tool, color: S.color, steady: S.steady, pts: [], raw: [], t: [], wSm: null };
   S.strokes.push(S.cur);
   S.lastT = -Infinity;
   document.body.classList.add('drawing');
@@ -141,9 +151,31 @@ function endStroke(e) {
   S.pointerId = null;
   document.body.classList.remove('drawing');
   const s = S.cur; S.cur = null;
-  if (s && s.pts.length) { S.history.push({ kind: 'stroke', stroke: s }); S.redo = []; }
+  if (s && s.pts.length) { S.history.push({ kind: 'stroke', stroke: s }); S.redo = []; settleStroke(s); }
   else if (s) S.strokes.pop();
   syncButtons();
+}
+
+// ---------------------------------------------------------------- ink settling
+// After pen-up the finished stroke is smoothed with a zero-phase filter (no lag, because the stroke is over).
+// How much depends on the tremor Steady has detected: none detected -> only a light polish.
+function settleStroke(s) {
+  const mode = SMOOTH.find(([k]) => k === S.smooth);
+  if (!mode || mode[3] == null || !s.steady || s.tool !== 'brush' || s.pts.length < 3) return;
+  const prm = adaptiveParams(steadyF, mode[3]);
+  const [xs, ys] = adaptiveSettle(s.t, s.pts.map((p) => p.x), s.pts.map((p) => p.y), prm);
+  const from = s.pts.map((p) => ({ ...p })), to = s.pts.map((p, i) => ({ ...p, x: xs[i], y: ys[i] }));
+  s.settle = prm;
+  const t0 = performance.now();
+  const frame = (now) => {
+    if (!S.strokes.includes(s)) { s.pts = to; return; } // undone mid-animation: redo shows the settled line
+    const u = Math.min(1, (now - t0) / SETTLE_MS), e = 1 - (1 - u) ** 3;
+    s.pts = from.map((p, i) => ({ ...p, x: p.x + (to[i].x - p.x) * e, y: p.y + (to[i].y - p.y) * e }));
+    redrawAll();
+    if (u < 1) requestAnimationFrame(frame); else s.pts = to;
+  };
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { s.pts = to; redrawAll(); }
+  else requestAnimationFrame(frame);
 }
 ink.addEventListener('pointerup', endStroke);
 ink.addEventListener('pointercancel', endStroke);
@@ -202,14 +234,16 @@ function syncButtons() {
   for (const b of document.querySelectorAll('.swatch')) b.setAttribute('aria-pressed', String(b.dataset.c === S.color));
   for (const b of document.querySelectorAll('.size')) b.setAttribute('aria-pressed', String(+b.dataset.s === S.size));
   $('synOn').setAttribute('aria-checked', String(S.syn.on)); $('ghostOn').setAttribute('aria-checked', String(S.ghost));
-  for (const b of document.querySelectorAll('.preset')) b.setAttribute('aria-pressed', String(b.dataset.k === S.syn.preset));
+  for (const b of document.querySelectorAll('#presetList .preset')) b.setAttribute('aria-pressed', String(b.dataset.k === S.syn.preset));
+  for (const b of document.querySelectorAll('.smooth-opt')) b.setAttribute('aria-pressed', String(b.dataset.k === S.smooth));
+  $('smoothLbl').textContent = SMOOTH.find(([k]) => k === S.smooth)[1];
   ghost.style.visibility = S.ghost ? 'visible' : 'hidden';
   persist();
 }
 function setSteady(on) { S.steady = on; syncButtons(); updateStatus(); }
 function setTool(t) { S.tool = t; syncButtons(); }
 
-const pops = { colorBtn: 'colorPop', sizeBtn: 'sizePop', demoBtn: 'demoPop' };
+const pops = { colorBtn: 'colorPop', sizeBtn: 'sizePop', smoothBtn: 'smoothPop', demoBtn: 'demoPop' };
 function closePops() {
   for (const [b, p] of Object.entries(pops)) { $(p).hidden = true; $(b).setAttribute('aria-expanded', 'false'); }
 }
@@ -236,6 +270,14 @@ for (const s of SIZES) {
   b.appendChild(dot);
   b.addEventListener('click', () => { S.size = s; syncButtons(); closePops(); });
   $('sizes').appendChild(b);
+}
+for (const [k, name, note] of SMOOTH) {
+  const b = document.createElement('button');
+  b.className = 'preset smooth-opt'; b.dataset.k = k; b.setAttribute('aria-pressed', 'false');
+  b.innerHTML = '<span class="p-name"></span><span class="p-note"></span>';
+  b.firstChild.textContent = name; b.lastChild.textContent = note;
+  b.addEventListener('click', () => { S.smooth = k; syncButtons(); closePops(); });
+  $('smoothList').appendChild(b);
 }
 for (const [k, name, note] of DEMO_PRESETS) {
   const b = document.createElement('button');
@@ -281,7 +323,7 @@ setInterval(() => { if (S.pointerId !== null || !document.hidden) updateStatus()
 
 // ---------------------------------------------------------------- preferences (per device; drawing itself is not stored)
 function persist() {
-  try { localStorage.setItem('steady.draw.prefs', JSON.stringify({ steady: S.steady, color: S.color, size: S.size, syn: { preset: S.syn.preset }, ghost: S.ghost })); } catch {}
+  try { localStorage.setItem('steady.draw.prefs', JSON.stringify({ steady: S.steady, color: S.color, size: S.size, syn: { preset: S.syn.preset }, ghost: S.ghost, smooth: S.smooth })); } catch {}
 }
 function load() {
   try {
@@ -291,6 +333,7 @@ function load() {
     if (COLORS.some(([, c]) => c === p.color)) S.color = p.color;
     if (SIZES.includes(p.size)) S.size = p.size;
     if (typeof p.ghost === 'boolean') S.ghost = p.ghost;
+    if (SMOOTH.some(([k]) => k === p.smooth)) S.smooth = p.smooth;
     if (p.syn && DEMO_PRESETS.some(([k]) => k === p.syn.preset)) S.syn.preset = p.syn.preset;
     // simulated tremor is never restored as "on": a real user should never be surprised by fake shake
   } catch {}

@@ -4,7 +4,7 @@ Static, dependency-free web app (vanilla HTML + ES modules). No build step, no n
 
 ## Pages
 - `index.html` — start page linking the two below.
-- **`draw.html` — the drawing app** (what users and judges see): full-screen paper, Steady on/off switch, brush/eraser, 10 colours, 4 sizes, pen pressure, undo/redo, two-tap clear (undoable), save PNG, palm rejection after a pen is used, keyboard shortcuts (Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z, Cmd/Ctrl+S, B, E, S, [ ]). A **Demo** panel adds simulated tremor (a list of tremor-type buttons: Healthy, ET mild, ET moderate, ET severe, Parkinson's rest; the chosen type is remembered, the switch is never restored as on) and can show the raw shaky line in grey. Files: `js/draw.js`, `css/draw.css`.
+- **`draw.html` — the drawing app** (what users and judges see): full-screen paper, Steady on/off switch, brush/eraser, 10 colours, 4 sizes, pen pressure, undo/redo, two-tap clear (undoable), save PNG, palm rejection after a pen is used, keyboard shortcuts (Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z, Cmd/Ctrl+S, B, E, S, [ ]). A **Demo** panel adds simulated tremor (a list of tremor-type buttons: Healthy, ET mild, ET moderate, ET severe, Parkinson's rest; the chosen type is remembered, the switch is never restored as on) and can show the raw shaky line in grey. A **Smoothing** button (Off / Smooth (default) / Extra smooth) settles each finished brush stroke after pen-up (`js/settle.js`, port of `steady/settle.py`, parity vs `shared/test_vectors/settle.json`); its strength follows the tremor Steady detected. Demo tremor is re-seeded on every page load. Files: `js/draw.js`, `css/draw.css`.
 - **`lab.html` — the testing & study bench** (formerly `index.html`): filter comparison, synthetic tremor, calibration, study mode with CSV export, Web Serial pen link. Files: `js/main.js`, `css/style.css`.
 - Both pages use the **same** `js/filters.js`, so study results apply to the drawing app.
 
@@ -38,7 +38,8 @@ open `http://localhost:8137/app/lab.html`, then in the console: `(await import('
 Tremor does not stop when the pen lifts, so the filter must not forget it on every stroke. `pointerdown` calls `filter.startStroke()` (= `start_stroke()` in Python): SteadyV2 keeps its oscillator state and restarts the intended-motion state diffusely at the next sample. For raw/ema/one_euro/steady_v1 `startStroke()` is a full reset (they have no persistent state worth keeping). A new filter instance (= forgotten tremor state) is created only when the user changes the filter, starts a new study session/participant, or a new study condition starts. In study mode there is one filter per condition and `startStroke()` is called at each task start and each stroke.
 
 ## Files
-- `js/tremor.js` realistic synthetic tremor (port of `software/core/steady/tremor_models.py`; `PRESETS`, `PRESET_ORDER`, `makeTremor(key, overrides, seed)`, `SpeedEstimator`). `js/compare.js` the compare-filters overlay maths and view.
+- `js/settle.js` ink settling (zero-phase smoothing of finished strokes; `settle`, `adaptiveParams`, `adaptiveSettle`).
+- `js/tremor.js` realistic synthetic tremor (irregular since 2026-10-20: fast amplitude changes, frequency wander, wandering axis) (port of `software/core/steady/tremor_models.py`; `PRESETS`, `PRESET_ORDER`, `makeTremor(key, overrides, seed)`, `SpeedEstimator`). `js/compare.js` the compare-filters overlay maths and view.
 - `js/filters.js` filters above, `TremorTracker` (port of `tremor_estimator.py`, used by steady_v1 and as the read-out for ema/one_euro), `Filter2D`.
 - `js/tasks.js` spiral/line/square templates and quick metrics. `js/study.js` Latin square + CSV writers. `js/serial.js` Web Serial. `js/main.js` UI.
 

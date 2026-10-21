@@ -1,5 +1,6 @@
 // Run with:  node software/app/tests/filters.test.mjs   (no dependencies)
 // Also importable from a browser page: `import { runTests } from './tests/filters.test.mjs'`.
+import { settle } from '../js/settle.js';
 import { RawFilter, EMAFilter, OneEuroFilter, SteadyFilter, SteadyV2, SteadyV3, Filter2D, FILTER_NAMES, FREE_FILTER_NAMES, TremorTracker, fft, makeFilter } from '../js/filters.js';
 
 const results = [];
@@ -189,6 +190,26 @@ export async function runTests(loadFile = defaultLoader) {
     }
   }
   // --- performance (informational): SteadyV2 x 2 axes, ms per sample, irregular 1000 Hz-ish stream
+  // --- parity: ink settling vs settle.json (abs tol 1e-9)
+  {
+    let txt = null;
+    try { txt = loadFile ? await loadFile('../../shared/test_vectors/settle.json') : null; } catch { txt = null; }
+    if (txt == null) console.log('SKIP parity settle: settle.json not found.');
+    else {
+      let e = 0;
+      for (const c of JSON.parse(txt).cases) {
+        const [sx, sy] = settle(c.t, c.x, c.y, c.fc);
+        c.expected.forEach(([ex, ey], i) => { e = Math.max(e, Math.abs(sx[i] - ex), Math.abs(sy[i] - ey)); });
+      }
+      check('parity settle (JS = Python) < 1e-9', e < 1e-9, `max err ${e.toExponential(2)}`);
+    }
+    const t = [], x = [], y = [];
+    for (let i = 0; i < 240; i++) { t.push(i / 120); x.push(20 * i / 120 + 2 * Math.sin(2 * Math.PI * 6 * i / 120)); y.push(5); }
+    const [sx, sy] = settle(t, x, y, 3);
+    const resid = sx.slice(40, 200).map((v, i) => v - 20 * t[i + 40]);
+    check('settle: removes 6 Hz wobble, keeps a straight line', rms(Array.from(resid)) < 0.15 && sy.every((v) => Math.abs(v - 5) < 1e-9), `rms=${rms(Array.from(resid)).toFixed(3)}`);
+    check('settle: end points stay put', Math.abs(sx[0] - x[0]) < 0.3 && Math.abs(sx[239] - x[239]) < 0.3, `start ${sx[0].toFixed(2)} end ${sx[239].toFixed(2)} vs ${x[239].toFixed(2)}`);
+  }
   {
     const f2 = new Filter2D('steady'); const now = (typeof performance !== 'undefined' ? performance : Date);
     const N = 20000; let t0 = 0; const r = rng(11);

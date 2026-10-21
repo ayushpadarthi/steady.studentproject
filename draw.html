@@ -14,6 +14,7 @@
   <symbol id="i-clear" viewBox="0 0 24 24"><path d="M5 7h14"/><path d="M10 4h4"/><path d="M7 7l1 13h8l1-13"/></symbol>
   <symbol id="i-save" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></symbol>
   <symbol id="i-brush" viewBox="0 0 24 24"><path d="M4 20c2.5 0 4-1.2 4-3.2 0-1.3 1-2.3 2.3-2.3"/><path d="M10.3 14.5 19 5.8a1.4 1.4 0 0 0-2-2L8.4 12.6"/><path d="M8.4 12.6c-1.2.2-2 1.1-2 2.3"/></symbol>
+  <symbol id="i-smooth" viewBox="0 0 24 24"><path d="M3 9c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/><path d="M3 16h18"/></symbol>
   <symbol id="i-eraser" viewBox="0 0 24 24"><path d="m8 20-4-4 10-10 6 6-8 8z"/><path d="M8 20h12"/><path d="m9 11 6 6"/></symbol>
 </svg>
 
@@ -35,7 +36,7 @@
 </header>
 
 <nav class="dock" data-ui aria-label="Tools">
-  <button id="steady" class="steady" role="switch" aria-checked="true" title="Turn the tremor filter on or off (S)">
+  <button id="steady" class="steady" role="switch" aria-checked="true" aria-label="Steady" title="Turn the tremor filter on or off (S)">
     <span class="knob" aria-hidden="true"></span><span class="lbl">Steady</span><span id="steadyState" class="state">On</span>
   </button>
   <span class="sep" aria-hidden="true"></span>
@@ -43,10 +44,16 @@
   <button id="toolEraser" class="tool" aria-pressed="false" title="Eraser (E)" aria-label="Eraser"><svg><use href="#i-eraser"/></svg></button>
   <button id="colorBtn" class="tool" aria-haspopup="true" aria-expanded="false" title="Colour" aria-label="Colour"><span id="colorChip" class="chip"></span></button>
   <button id="sizeBtn" class="tool" aria-haspopup="true" aria-expanded="false" title="Brush size ([ and ])" aria-label="Brush size"><span id="sizeDot" class="dot"></span></button>
+  <button id="smoothBtn" class="tool wide" aria-haspopup="true" aria-expanded="false" title="Smoothing after each stroke" aria-label="Smoothing"><svg><use href="#i-smooth"/></svg><span id="smoothLbl">Smooth</span></button>
 </nav>
 
 <div id="colorPop" class="pop" role="dialog" aria-label="Colour" hidden><div class="swatches" id="swatches"></div></div>
 <div id="sizePop" class="pop" role="dialog" aria-label="Brush size" hidden><div class="sizes" id="sizes"></div></div>
+<div id="smoothPop" class="pop list" role="dialog" aria-label="Smoothing" hidden>
+  <p class="pop-title">Smoothing</p>
+  <p class="pop-note">While you draw, Steady keeps the line fast. When you lift the pen, the stroke can settle into a smoother line. The amount follows the shake Steady has measured.</p>
+  <div id="smoothList" class="presets" role="group" aria-label="Smoothing amount"></div>
+</div>
 <div id="demoPop" class="pop demo" role="dialog" aria-label="Demonstration settings" hidden>
   <p class="pop-title">Demonstration</p>
   <p class="pop-note">Adds an artificial shake to your input so you can see what Steady removes. Leave it off for real use.</p>

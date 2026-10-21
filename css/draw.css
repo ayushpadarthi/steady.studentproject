@@ -134,3 +134,10 @@ button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   button.steady .state { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* Smoothing popover: opens above the dock like colour/size, but holds a labelled list like the Demo panel. */
+button.tool.wide { padding: 0 12px; gap: 8px; font-weight: 550; }
+.pop.list { width: 320px; display: flex; flex-direction: column; gap: 10px; }
+@media (max-width: 640px) { button.tool.wide { padding: 0; } button.tool.wide span { display: none; } }
+/* Very narrow phones: the switch keeps its knob and colour; the status line above says "Steady is on/off" in words. */
+@media (max-width: 400px) { button.steady .lbl { display: none; } button.steady { padding: 0 10px; } }
