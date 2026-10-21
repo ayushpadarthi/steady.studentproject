@@ -529,7 +529,7 @@ export class SteadyV3 {
     this.freqs = this.inner.freqs;
     this.reset();
   }
-  reset() { this.inner.reset(); this.fin.reset(); this.g = 0; this.gInit = false; this.t = null; this.out = NaN; }
+  reset() { this.inner.reset(); this.fin.reset(); this.g = 0; this.gInit = false; this.t = null; this.out = NaN; this.y2 = NaN; }
   startStroke() { this.inner.startStroke(); this.fin.reset(); this.t = null; }
   start_stroke() { this.startStroke(); }
   _gateTarget() {
@@ -539,6 +539,7 @@ export class SteadyV3 {
   }
   step(t, z) {
     const y2 = this.inner.step(t, z);
+    this.y2 = y2; // zero-lag tremor-cancelled position; z - y2 = the shake estimate (Shake style)
     if (!(Number.isFinite(y2) && Number.isFinite(t))) return this.out;
     if (!Number.isFinite(z)) z = y2;
     const gt = this._gateTarget();

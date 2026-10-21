@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
 <title>Steady</title>
-<link rel="stylesheet" href="css/draw.css?v=9">
+<link rel="stylesheet" href="css/draw.css?v=10">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -44,7 +44,7 @@
   <button id="toolEraser" class="tool" aria-pressed="false" title="Eraser (E)" aria-label="Eraser"><svg><use href="#i-eraser"/></svg></button>
   <button id="colorBtn" class="tool" aria-haspopup="true" aria-expanded="false" title="Colour" aria-label="Colour"><span id="colorChip" class="chip"></span></button>
   <button id="sizeBtn" class="tool" aria-haspopup="true" aria-expanded="false" title="Brush size ([ and ])" aria-label="Brush size"><span id="sizeDot" class="dot"></span></button>
-  <button id="smoothBtn" class="tool wide" aria-haspopup="true" aria-expanded="false" title="Smoothing after each stroke" aria-label="Smoothing"><svg><use href="#i-smooth"/></svg><span id="smoothLbl">Smooth</span><b id="smoothBadge" class="badge" aria-hidden="true">1</b></button>
+  <button id="smoothBtn" class="tool wide" aria-haspopup="true" aria-expanded="false" title="Line: smoothing and shake style" aria-label="Smoothing"><svg><use href="#i-smooth"/></svg><span id="smoothLbl">Smooth</span><b id="smoothBadge" class="badge" aria-hidden="true">1</b></button>
 </nav>
 
 <aside id="shakeCard" class="shake-card" aria-label="Your shake" hidden>
@@ -60,10 +60,14 @@
 
 <div id="colorPop" class="pop" role="dialog" aria-label="Colour" hidden><div class="swatches" id="swatches"></div></div>
 <div id="sizePop" class="pop" role="dialog" aria-label="Brush size" hidden><div class="sizes" id="sizes"></div></div>
-<div id="smoothPop" class="pop list" role="dialog" aria-label="Smoothing" hidden>
+<div id="smoothPop" class="pop list" role="dialog" aria-label="Line settings" hidden>
   <p class="pop-title">Smoothing</p>
   <p class="pop-note">While you draw, Steady keeps the line fast. When you lift the pen, the stroke can settle into a smoother line. The amount follows the shake Steady has measured.</p>
   <div id="smoothList" class="presets" role="group" aria-label="Smoothing amount"></div>
+  <p class="pop-title">Shake style</p>
+  <p class="pop-note">Steady separates your shake from the line you meant. Instead of only deleting it, it can become part of the brush. The line still goes where you meant it to.</p>
+  <p id="styleNote" class="pop-note warn-note" hidden>Turn Steady on to use a shake style.</p>
+  <div id="styleList" class="presets" role="group" aria-label="Shake style"></div>
 </div>
 <div id="demoPop" class="pop demo" role="dialog" aria-label="Demonstration settings" hidden>
   <p class="pop-title">Demonstration</p>
@@ -79,6 +83,6 @@
 
 <div id="flash" class="flash" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="js/draw.js?v=9"></script>
+<script type="module" src="js/draw.js?v=10"></script>
 </body>
 </html>

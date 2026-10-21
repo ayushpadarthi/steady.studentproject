@@ -1,6 +1,7 @@
 // Run with:  node software/app/tests/filters.test.mjs   (no dependencies)
 // Also importable from a browser page: `import { runTests } from './tests/filters.test.mjs'`.
 import { settle, clampTo, clampMm } from '../js/settle.js';
+import { ShakeTracker } from '../js/shakestyle.js';
 import { RawFilter, EMAFilter, OneEuroFilter, SteadyFilter, SteadyV2, SteadyV3, Filter2D, FILTER_NAMES, FREE_FILTER_NAMES, TremorTracker, fft, makeFilter } from '../js/filters.js';
 
 const results = [];
@@ -218,6 +219,27 @@ export async function runTests(loadFile = defaultLoader) {
       const swingRaw = Math.max(...xx) - Math.min(...xx), swingCl = Math.max(...cl.map((p) => p.x)) - Math.min(...cl.map((p) => p.x));
       check('settle limit: points move <= 2*amp+0.5 mm, big strokes keep their size', maxMove <= clampMm(0.5) + 1e-9 && swingCl > swingRaw - 2 * clampMm(0.5) - 1e-9,
         `maxMove ${maxMove.toFixed(2)} swing ${swingRaw.toFixed(1)} -> ${swingCl.toFixed(1)}`); }
+  }
+  // --- parity: Shake style tracker vs shake_style.json (inputs from Python SteadyV3; checks env and marks)
+  {
+    let txt = null;
+    try { txt = loadFile ? await loadFile('../../shared/test_vectors/shake_style.json') : null; } catch { txt = null; }
+    if (txt == null) console.log('SKIP parity shake style: shake_style.json not found.');
+    else {
+      let eEnv = 0, markMis = 0, eMark = 0, n = 0;
+      for (const c of JSON.parse(txt).cases) {
+        const sh = new ShakeTracker(); let cur = -1;
+        for (const [si, t, x, y, dx, dy, env, mark] of c.rows) {
+          if (si !== cur) { sh.startStroke(); cur = si; }
+          const [e, m] = sh.step(t, x ?? NaN, y ?? NaN, dx ?? NaN, dy ?? NaN);
+          eEnv = Math.max(eEnv, Math.abs(e - env)); if ((m > 0) !== (mark > 0)) markMis++; eMark = Math.max(eMark, Math.abs(m - mark)); n++;
+        }
+      }
+      check('parity shake style (JS = Python): env < 1e-9, same marks', eEnv < 1e-9 && markMis === 0 && eMark < 1e-9, `${n} samples, env err ${eEnv.toExponential(2)}, mark mismatches ${markMis}`);
+    }
+    // the real filter exposes the zero-lag estimate used for the shake
+    const f = new Filter2D('steady'); for (let i = 0; i < 240; i++) f.step(i / 120, 10 * i / 120 + 2 * Math.sin(2 * Math.PI * 6 * i / 120), 0);
+    check('SteadyV3 exposes y2 (zero-lag estimate) for Shake style', Number.isFinite(f.fx.y2) && Number.isFinite(f.fy.y2));
   }
   {
     const f2 = new Filter2D('steady'); const now = (typeof performance !== 'undefined' ? performance : Date);

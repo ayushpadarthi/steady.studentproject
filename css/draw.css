@@ -183,3 +183,8 @@ button.tool.wide[data-mode="off"] svg { opacity: .45; }
 .replay-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
 .replay-bar button.text { border: 1px solid var(--line); }
 .replay-time { flex: 1; min-width: 140px; font-size: 13px; color: var(--muted); }
+/* Line popover holds two lists (smoothing + shake style): let it scroll on short screens. */
+.pop.list { max-height: calc(100dvh - var(--hit) - 140px); overflow-y: auto; }
+.warn-note { color: #8a1c1c; }
+button.tool.wide.styled .badge { background: var(--steady); }
+button.tool.wide span { white-space: nowrap; }
