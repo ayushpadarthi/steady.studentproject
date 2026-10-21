@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Spiral check-in</title>
+<link rel="stylesheet" href="css/draw.css?v=9">
+<link rel="stylesheet" href="css/pages.css?v=9">
+</head>
+<body class="page">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-restart" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4h4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+</svg>
+
+<canvas id="guide" aria-hidden="true"></canvas>
+<canvas id="ghost" aria-hidden="true"></canvas>
+<canvas id="ink" aria-label="Spiral drawing area"></canvas>
+
+<header class="top" data-ui>
+  <div class="brand">
+    <span class="mark"><a class="back" href="index.html">Steady</a> <span class="mark-sub">Spiral check-in</span></span>
+    <span id="status" class="status" aria-live="polite">Trace the grey spiral from the centre outwards, then press Done.</span>
+  </div>
+  <div class="actions">
+    <button id="restart" class="icon" title="Clear and start again"><svg><use href="#i-restart"/></svg><span>Start over</span></button>
+    <button id="done" class="icon primary keep" disabled title="Measure this spiral"><svg><use href="#i-check"/></svg><span>Done</span></button>
+    <button id="logBtn" class="icon" title="Your saved check-ins"><svg><use href="#i-list"/></svg><span>Log</span></button>
+    <button id="demoBtn" class="icon keep" aria-haspopup="true" aria-expanded="false" title="Demonstration settings"><span>Demo</span></button>
+  </div>
+</header>
+
+<nav class="dock" data-ui aria-label="Tools">
+  <button id="steady" class="steady" role="switch" aria-checked="true" aria-label="Steady" title="Turn the tremor filter on or off">
+    <span class="knob" aria-hidden="true"></span><span class="lbl">Steady</span><span id="steadyState" class="state">On</span>
+  </button>
+</nav>
+
+<section id="sheet" class="sheet" aria-label="Result" hidden>
+  <p class="pop-title">This check-in</p>
+  <p class="big"><b id="rShake">–</b><span id="rShakeNote">shake size</span></p>
+  <dl class="nums">
+    <div><dt>Shake speed</dt><dd id="rHz">–</dd></div>
+    <div><dt>Time</dt><dd id="rDur">–</dd></div>
+    <div><dt>Off the spiral, your hand</dt><dd id="rErrRaw">–</dd></div>
+    <div><dt>Off the spiral, with Steady</dt><dd id="rErrSteady">–</dd></div>
+  </dl>
+  <p id="rWarn" class="warn" hidden></p>
+  <div class="row">
+    <button id="saveEntry" class="text primary">Save to my log</button>
+    <button id="again" class="text">Try again</button>
+  </div>
+  <p class="fine">A personal record of how your drawing changes, not a medical test.</p>
+</section>
+
+<section id="logPanel" class="panel" aria-label="Check-in log" hidden>
+  <div class="panel-in">
+    <div class="panel-head"><h2>Your check-ins</h2><button id="logClose" class="text">Close</button></div>
+    <p class="fine">Shake size over time (mm). Saved only on this device. Entries made with simulated tremor are marked "demo".</p>
+    <canvas id="chart" class="chart" aria-label="Chart of shake size over time"></canvas>
+    <div class="tablewrap"><table class="log"><thead><tr><th>Date</th><th>Shake</th><th>Speed</th><th>Off spiral (hand / Steady)</th><th>Note</th><th></th></tr></thead>
+      <tbody id="logBody"></tbody></table></div>
+    <p id="logEmpty" class="empty" hidden>No check-ins yet. Trace a spiral and press Done, then Save.</p>
+    <div class="row"><button id="exportCsv" class="text">Download as CSV</button></div>
+  </div>
+</section>
+
+<div id="demoPop" class="pop demo" role="dialog" aria-label="Demonstration settings" hidden>
+  <p class="pop-title">Demonstration</p>
+  <p class="pop-note">Adds an artificial shake so you can try the check-in. Saved entries are marked "demo".</p>
+  <button id="synOn" class="row-switch" role="switch" aria-checked="false"><span>Simulate tremor</span><span class="mini"><span class="knob"></span></span></button>
+  <div id="presetList" class="presets" role="group" aria-label="Kind of tremor to simulate"></div>
+  <button id="ghostOn" class="row-switch" role="switch" aria-checked="false"><span>Show the raw, shaky line</span><span class="mini"><span class="knob"></span></span></button>
+</div>
+
+<script type="module" src="js/checkin.js?v=9"></script>
+</body>
+</html>

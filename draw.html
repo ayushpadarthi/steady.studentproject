@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
 <title>Steady</title>
-<link rel="stylesheet" href="css/draw.css">
+<link rel="stylesheet" href="css/draw.css?v=9">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -44,8 +44,19 @@
   <button id="toolEraser" class="tool" aria-pressed="false" title="Eraser (E)" aria-label="Eraser"><svg><use href="#i-eraser"/></svg></button>
   <button id="colorBtn" class="tool" aria-haspopup="true" aria-expanded="false" title="Colour" aria-label="Colour"><span id="colorChip" class="chip"></span></button>
   <button id="sizeBtn" class="tool" aria-haspopup="true" aria-expanded="false" title="Brush size ([ and ])" aria-label="Brush size"><span id="sizeDot" class="dot"></span></button>
-  <button id="smoothBtn" class="tool wide" aria-haspopup="true" aria-expanded="false" title="Smoothing after each stroke" aria-label="Smoothing"><svg><use href="#i-smooth"/></svg><span id="smoothLbl">Smooth</span></button>
+  <button id="smoothBtn" class="tool wide" aria-haspopup="true" aria-expanded="false" title="Smoothing after each stroke" aria-label="Smoothing"><svg><use href="#i-smooth"/></svg><span id="smoothLbl">Smooth</span><b id="smoothBadge" class="badge" aria-hidden="true">1</b></button>
 </nav>
+
+<aside id="shakeCard" class="shake-card" aria-label="Your shake" hidden>
+  <p class="pop-title">Your shake</p>
+  <p id="shakeLine" class="shake-line">No clear shake yet</p>
+  <dl class="shake-nums">
+    <div><dt>Frequency</dt><dd id="shakeHz">&ndash;</dd></div>
+    <div><dt>Size</dt><dd id="shakeMm">&ndash;</dd></div>
+  </dl>
+  <canvas id="shakeTrace" aria-hidden="true"></canvas>
+  <p class="shake-cap">Last 2 s of drawing: your hand minus the Steady line (dark: side to side, grey: up and down)</p>
+</aside>
 
 <div id="colorPop" class="pop" role="dialog" aria-label="Colour" hidden><div class="swatches" id="swatches"></div></div>
 <div id="sizePop" class="pop" role="dialog" aria-label="Brush size" hidden><div class="sizes" id="sizes"></div></div>
@@ -60,9 +71,14 @@
   <button id="synOn" class="row-switch" role="switch" aria-checked="false"><span>Simulate tremor</span><span class="mini"><span class="knob"></span></span></button>
   <div id="presetList" class="presets" role="group" aria-label="Kind of tremor to simulate"></div>
   <button id="ghostOn" class="row-switch" role="switch" aria-checked="false"><span>Show the raw, shaky line</span><span class="mini"><span class="knob"></span></span></button>
-  <p class="pop-foot"><a href="lab.html">Open the lab</a> for measurements and studies.</p>
+  <button id="shakeOn" class="row-switch" role="switch" aria-checked="false"><span>Show "Your shake" card</span><span class="mini"><span class="knob"></span></span></button>
+  <button id="replayBtn" class="row-btn" title="Watch your last stroke again, slowed down (R)"><svg><use href="#i-redo"/></svg><span>Replay last stroke in slow motion</span></button>
+  <button id="saveBA" class="row-btn" title="One picture: your raw input on the left, the Steady line on the right"><svg><use href="#i-save"/></svg><span>Save before/after picture</span></button>
+  <p class="pop-foot">More: <a href="trace.html">Trace and colour</a> · <a href="checkin.html">Spiral check-in</a> · <a href="lab.html">Lab</a></p>
 </div>
 
-<script type="module" src="js/draw.js"></script>
+<div id="flash" class="flash" role="status" aria-live="polite" hidden></div>
+
+<script type="module" src="js/draw.js?v=9"></script>
 </body>
 </html>

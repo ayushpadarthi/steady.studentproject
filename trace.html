@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Trace and colour</title>
+<link rel="stylesheet" href="css/draw.css?v=9">
+<link rel="stylesheet" href="css/pages.css?v=9">
+</head>
+<body class="page">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-restart" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4h4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></symbol>
+</svg>
+
+<canvas id="guide" aria-hidden="true"></canvas>
+<canvas id="ghost" aria-hidden="true"></canvas>
+<canvas id="ink" aria-label="Tracing area"></canvas>
+
+<header class="top" data-ui>
+  <div class="brand">
+    <span class="mark"><a class="back" href="index.html">Steady</a> <span id="pageName" class="mark-sub">Trace</span></span>
+    <span id="status" class="status" aria-live="polite"></span>
+  </div>
+  <div class="actions">
+    <button id="pickBtn" class="icon" title="Choose a page"><svg><use href="#i-grid"/></svg><span>Pages</span></button>
+    <button id="restart" class="icon" title="Clear and start again"><svg><use href="#i-restart"/></svg><span>Start over</span></button>
+    <button id="scoreBtn" class="icon primary keep" disabled title="Score this page"><svg><use href="#i-check"/></svg><span>Score</span></button>
+    <button id="demoBtn" class="icon keep" aria-haspopup="true" aria-expanded="false" title="Demonstration settings"><span>Demo</span></button>
+  </div>
+</header>
+
+<nav class="dock" data-ui aria-label="Tools">
+  <button id="steady" class="steady" role="switch" aria-checked="true" aria-label="Steady" title="Turn the tremor filter on or off">
+    <span class="knob" aria-hidden="true"></span><span class="lbl">Steady</span><span id="steadyState" class="state">On</span>
+  </button>
+  <span id="paintSep" class="sep" aria-hidden="true" hidden></span>
+  <div id="paints" class="paints" role="group" aria-label="Colour" hidden></div>
+</nav>
+
+<section id="sheet" class="sheet" aria-label="Score" hidden>
+  <p class="pop-title" id="sTitle">Your score</p>
+  <p class="big"><b id="sMain">–</b><span id="sMainNote">inside the lines</span></p>
+  <dl class="nums">
+    <div><dt id="sSecondLbl">Covered</dt><dd id="sSecond">–</dd></div>
+    <div><dt>Without Steady</dt><dd id="sRaw">–</dd></div>
+  </dl>
+  <p id="sNote" class="fine"></p>
+  <div class="row">
+    <button id="again" class="text primary">Try again</button>
+    <button id="nextPage" class="text">Next page</button>
+  </div>
+</section>
+
+<section id="pickPanel" class="panel" aria-label="Choose a page" hidden>
+  <div class="panel-in">
+    <div class="panel-head"><h2>Choose a page</h2><button id="pickClose" class="text">Close</button></div>
+    <p class="section-title">Trace: follow the grey path</p>
+    <div id="pickTrace" class="picks"></div>
+    <p class="section-title">Colour: fill the shape, stay inside the outline</p>
+    <div id="pickColour" class="picks"></div>
+  </div>
+</section>
+
+<div id="demoPop" class="pop demo" role="dialog" aria-label="Demonstration settings" hidden>
+  <p class="pop-title">Demonstration</p>
+  <p class="pop-note">Adds an artificial shake to your input. Try a page with Steady off, then on, and compare the scores.</p>
+  <button id="synOn" class="row-switch" role="switch" aria-checked="false"><span>Simulate tremor</span><span class="mini"><span class="knob"></span></span></button>
+  <div id="presetList" class="presets" role="group" aria-label="Kind of tremor to simulate"></div>
+  <button id="ghostOn" class="row-switch" role="switch" aria-checked="false"><span>Show the raw, shaky line</span><span class="mini"><span class="knob"></span></span></button>
+</div>
+
+<script type="module" src="js/trace.js?v=9"></script>
+</body>
+</html>

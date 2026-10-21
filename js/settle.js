@@ -66,8 +66,23 @@ export function adaptiveParams(f2d, k = K) {
   return { fc, w };
 }
 
-/** Settled stroke: w * settle(fc) + (1 - w) * settle(BASE_FC). */
-export function adaptiveSettle(t, xs, ys, { fc, w }) {
-  const [ax, ay] = settle(t, xs, ys, fc), [bx, by] = settle(t, xs, ys, BASE_FC);
+/** Settled stroke: w * settle(fc) + (1 - w) * settle(base). base defaults to BASE_FC (the evaluated setting);
+ *  the drawing app's "Extra smooth" passes a lower base so it smooths visibly even with no tremor detected. */
+export function adaptiveSettle(t, xs, ys, { fc, w, base = BASE_FC }) {
+  const [ax, ay] = settle(t, xs, ys, fc), [bx, by] = settle(t, xs, ys, base);
   return [ax.map((v, i) => w * v + (1 - w) * bx[i]), ay.map((v, i) => w * v + (1 - w) * by[i])];
 }
+
+// Shake-size limit (same as clamp_to/clamp_mm in settle.py): settling may move a point at most
+// 2 x detected tremor amplitude + 0.5 mm, so fast intended motion (e.g. colouring back and forth) keeps its shape.
+export const CLAMP_K = 2.0, CLAMP_MIN_MM = 0.5;
+export function clampMm(ampMm) { return CLAMP_K * (Number.isFinite(ampMm) ? ampMm : 0) + CLAMP_MIN_MM; }
+/** live, settled: arrays of {x, y} (any unit); max in the same unit. Returns new {x, y} points. */
+export function clampTo(live, xs, ys, max) {
+  return live.map((p, i) => {
+    const dx = xs[i] - p.x, dy = ys[i] - p.y, n = Math.hypot(dx, dy), k = n > max ? max / n : 1;
+    return { ...p, x: p.x + dx * k, y: p.y + dy * k };
+  });
+}
+/** Max detected tremor amplitude (mm) of a Filter2D('steady'). */
+export function tremorAmp(f2d) { return Math.max(f2d.fx.tremor_amp_mm(), f2d.fy.tremor_amp_mm()); }

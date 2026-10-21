@@ -1,6 +1,6 @@
 // Run with:  node software/app/tests/filters.test.mjs   (no dependencies)
 // Also importable from a browser page: `import { runTests } from './tests/filters.test.mjs'`.
-import { settle } from '../js/settle.js';
+import { settle, clampTo, clampMm } from '../js/settle.js';
 import { RawFilter, EMAFilter, OneEuroFilter, SteadyFilter, SteadyV2, SteadyV3, Filter2D, FILTER_NAMES, FREE_FILTER_NAMES, TremorTracker, fft, makeFilter } from '../js/filters.js';
 
 const results = [];
@@ -209,6 +209,15 @@ export async function runTests(loadFile = defaultLoader) {
     const resid = sx.slice(40, 200).map((v, i) => v - 20 * t[i + 40]);
     check('settle: removes 6 Hz wobble, keeps a straight line', rms(Array.from(resid)) < 0.15 && sy.every((v) => Math.abs(v - 5) < 1e-9), `rms=${rms(Array.from(resid)).toFixed(3)}`);
     check('settle: end points stay put', Math.abs(sx[0] - x[0]) < 0.3 && Math.abs(sx[239] - x[239]) < 0.3, `start ${sx[0].toFixed(2)} end ${sx[239].toFixed(2)} vs ${x[239].toFixed(2)}`);
+    // shake-size limit: fast back-and-forth (colouring) keeps its size after settling
+    { const tt = [], xx = [], yy = [];
+      for (let i = 0; i < 240; i++) { tt.push(i / 120); xx.push(20 * Math.sin(2 * Math.PI * 2 * i / 120)); yy.push(0); }
+      const [hx, hy] = settle(tt, xx, yy, 3);
+      const live = xx.map((x, i) => ({ x, y: yy[i] })), cl = clampTo(live, hx, hy, clampMm(0.5));
+      const maxMove = Math.max(...cl.map((p, i) => Math.hypot(p.x - live[i].x, p.y - live[i].y)));
+      const swingRaw = Math.max(...xx) - Math.min(...xx), swingCl = Math.max(...cl.map((p) => p.x)) - Math.min(...cl.map((p) => p.x));
+      check('settle limit: points move <= 2*amp+0.5 mm, big strokes keep their size', maxMove <= clampMm(0.5) + 1e-9 && swingCl > swingRaw - 2 * clampMm(0.5) - 1e-9,
+        `maxMove ${maxMove.toFixed(2)} swing ${swingRaw.toFixed(1)} -> ${swingCl.toFixed(1)}`); }
   }
   {
     const f2 = new Filter2D('steady'); const now = (typeof performance !== 'undefined' ? performance : Date);

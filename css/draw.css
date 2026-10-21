@@ -141,3 +141,45 @@ button.tool.wide { padding: 0 12px; gap: 8px; font-weight: 550; }
 @media (max-width: 640px) { button.tool.wide { padding: 0; } button.tool.wide span { display: none; } }
 /* Very narrow phones: the switch keeps its knob and colour; the status line above says "Steady is on/off" in words. */
 @media (max-width: 400px) { button.steady .lbl { display: none; } button.steady { padding: 0 10px; } }
+
+/* Demo panel: plain action row (same size as the switches). */
+.row-btn { display: flex; align-items: center; gap: 10px; min-height: var(--hit); padding: 0 12px; border: 1px solid var(--line);
+  border-radius: 12px; background: var(--panel); cursor: pointer; text-align: left; }
+.row-btn:hover { background: var(--panel-2); }
+.row-btn:disabled { opacity: .4; cursor: default; background: var(--panel); }
+
+/* "Your shake" card: read-only, so it stays visible while drawing and never catches the pen. */
+.shake-card { position: fixed; top: calc(max(12px, env(safe-area-inset-top)) + 84px); left: max(16px, env(safe-area-inset-left));
+  width: 208px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; pointer-events: none;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.shake-card[hidden] { display: none; }
+.shake-card p { margin: 0; }
+.shake-line { font-size: 13px; color: var(--muted); }
+.shake-nums { display: flex; gap: 16px; margin: 0; }
+.shake-nums dt { font-size: 12px; color: var(--muted); }
+.shake-nums dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+#shakeTrace { position: static; width: 100%; height: 44px; }
+.shake-cap { font-size: 11.5px; color: var(--muted); line-height: 1.3; }
+@media (max-width: 640px) { .shake-card { top: calc(max(12px, env(safe-area-inset-top)) + 98px); } } /* below the two-row phone header */
+
+/* Smoothing mode is always visible: word on wide screens, a small badge (Off / 1 / 2) on narrow ones. */
+button.tool.wide { position: relative; }
+.badge { display: none; position: absolute; right: 2px; top: 3px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
+  background: var(--ink); color: var(--paper); font-size: 11px; font-weight: 650; line-height: 18px; text-align: center; }
+button.tool.wide[data-mode="off"] svg { opacity: .45; }
+@media (max-width: 640px) { .badge { display: block; } button.tool.wide[data-mode="off"] .badge { background: var(--muted); } }
+.flash { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); padding: 12px 18px; border-radius: 12px;
+  background: var(--ink); color: var(--paper); font-weight: 600; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.flash.show { opacity: .92; }
+
+/* ---------------------------------------------------------------- slow-motion replay */
+.replay { position: fixed; inset: 0; z-index: 20; background: var(--paper); display: flex; flex-direction: column;
+  padding: max(12px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom)); gap: 8px; }
+.replay-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+.replay-legend { margin: 0; font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.key { display: inline-block; width: 18px; height: 3px; border-radius: 2px; vertical-align: middle; }
+.key.raw { background: #9a9aa0; height: 2px; } .key.live { background: var(--ink); } .key.fin { background: var(--steady); }
+.replay-cv { flex: 1; width: 100%; min-height: 0; position: static; height: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+.replay-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
+.replay-bar button.text { border: 1px solid var(--line); }
+.replay-time { flex: 1; min-width: 140px; font-size: 13px; color: var(--muted); }

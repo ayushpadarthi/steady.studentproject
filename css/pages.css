@@ -1,0 +1,69 @@
+/* Extra pieces for the check-in and tracing pages (loaded after draw.css, same tokens and rules). */
+.top .back { color: var(--ink); text-decoration: none; font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+.top .back:hover { text-decoration: underline; }
+.mark-sub { font-weight: 500; color: var(--muted); }
+button.icon.primary { background: var(--steady); color: var(--steady-ink); font-weight: 600; }
+button.icon.primary:hover { background: var(--steady); filter: brightness(1.08); }
+button.icon.primary:disabled { background: var(--steady); opacity: .35; }
+#guide { pointer-events: none; }
+
+/* Result sheet: bottom-left card above the dock */
+.sheet { position: fixed; left: max(12px, env(safe-area-inset-left)); bottom: calc(max(16px, env(safe-area-inset-bottom)) + var(--hit) + 26px);
+  width: min(360px, calc(100vw - 24px)); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.sheet[hidden] { display: none; }
+.big { display: flex; align-items: baseline; gap: 8px; margin: 0; }
+.big b { font-size: 30px; font-weight: 650; letter-spacing: -.02em; }
+.big span { color: var(--muted); font-size: 14px; }
+.nums { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; margin: 0; }
+.nums dt { font-size: 12.5px; color: var(--muted); }
+.nums dd { margin: 0; font-weight: 600; }
+.sheet .row { display: flex; gap: var(--gap); flex-wrap: wrap; }
+.sheet .row button.text { border: 1px solid var(--line); }
+.sheet .row button.text.primary { background: var(--steady); border-color: var(--steady); color: var(--steady-ink); }
+.warn { margin: 0; font-size: 13px; color: #8a1c1c; }
+.fine { margin: 0; font-size: 12.5px; color: var(--muted); }
+
+/* Full-screen panel (log, picker) */
+.panel { position: fixed; inset: 0; z-index: 15; background: var(--paper); overflow-y: auto;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); }
+.panel[hidden] { display: none; }
+.panel-in { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.panel h2 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -.015em; }
+.panel .row { display: flex; gap: var(--gap); flex-wrap: wrap; }
+.panel button.text { border: 1px solid var(--line); }
+.chart { width: 100%; height: 180px; border: 1px solid var(--line); border-radius: var(--radius); display: block; position: static; }
+.log { width: 100%; border-collapse: collapse; font-size: 14px; }
+.log th, .log td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.log th { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.log td.num { font-variant-numeric: tabular-nums; }
+.log button.del { min-height: var(--hit); padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); cursor: pointer; }
+.log button.del.armed { background: #fdecec; color: #8a1c1c; }
+.empty { color: var(--muted); }
+.tablewrap { overflow-x: auto; }
+
+/* Template picker (tracing page) */
+.picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.pick { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; min-height: var(--hit);
+  border: 1px solid var(--line); border-radius: 12px; background: var(--panel); cursor: pointer; }
+.pick:hover { background: var(--panel-2); }
+.pick[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
+.pick canvas { position: static; width: 100%; height: 72px; }
+.pick span { font-weight: 600; }
+.pick small { color: var(--muted); }
+.section-title { margin: 6px 0 0; font-weight: 650; }
+
+@media (max-width: 640px) {
+  .sheet { left: 12px; right: 12px; width: auto; }
+  .log th:nth-child(5), .log td:nth-child(5) { display: none; }
+}
+.paints { display: flex; gap: 6px; }
+.paints[hidden], .sep[hidden] { display: none; }
+.paints .swatch[aria-pressed="true"]::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--ink); }
+@media (max-width: 640px) {
+  body.page .brand { flex-direction: column; align-items: flex-start; gap: 2px; }
+  body.page .mark { white-space: nowrap; }
+}
+/* These pages have room in the dock, so the Steady switch keeps its word even on small phones. */
+@media (max-width: 400px) { body.page button.steady .lbl { display: inline; } body.page button.steady { padding: 0 14px 0 10px; } }
