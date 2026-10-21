@@ -1,5 +1,6 @@
 // Steady drawing app. Uses the SAME filter code as the lab (js/filters.js), so study results apply to it.
 import { Filter2D } from './filters.js';
+import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js';
 
 const $ = (id) => document.getElementById(id);
 const MM_PER_PX = 0.2646; // same default as the lab (96 px/in); the filter's parameters are in millimetres
@@ -9,12 +10,19 @@ const COLORS = [
   ['Sap green', '#6f9a2e'], ['Ochre', '#d39b2a'], ['Vermilion', '#e0472b'], ['Crimson', '#b0203f'], ['Violet', '#6a3d9a'],
 ];
 const SIZES = [2, 4, 8, 16]; // CSS px
-const HZ = { min: 3, max: 12, step: 0.5 }, MM = { min: 0.5, max: 4, step: 0.5 };
+// Demo tremor types offered in the Demo panel: [key, short name, one-line note]
+const DEMO_PRESETS = [
+  ['healthy', 'Healthy', 'Normal tiny shake, about 0.1 mm'],
+  ['et_mild', 'ET mild', 'Essential tremor: a visible wobble'],
+  ['et_moderate', 'ET moderate', 'Essential tremor: clearly shaky lines'],
+  ['et_severe', 'ET severe', 'Large, slower shake; very hard to draw'],
+  ['pd_rest', "Parkinson's rest", 'Fades while moving, returns when you pause'],
+];
 
 // ---------------------------------------------------------------- state
 const S = {
   steady: true, tool: 'brush', color: COLORS[0][1], size: 4,
-  syn: { on: false, hz: 6, mm: 1.5 }, ghost: false,
+  syn: { on: false, preset: 'et_moderate' }, ghost: false,
   strokes: [], history: [], redo: [],   // history items: {kind:'stroke', stroke} | {kind:'clear', removed:[...]}
   cur: null, pointerId: null, sawPen: false, lastT: -Infinity,
   w: 0, h: 0, dpr: 1,
@@ -23,6 +31,8 @@ load();
 // One persistent Steady filter for the whole drawing session: it keeps learning the tremor between strokes.
 // It is fed even when Steady is switched off, so switching it back on is instantly warm.
 const steadyF = new Filter2D('steady');
+// Same speed-dependent tremor generator as the lab (one instance, continuous in time across strokes).
+const tremorGen = makeTremor(S.syn.preset, {}, 20240607), speedEst = new SpeedEstimator(0.08);
 
 // ---------------------------------------------------------------- canvases
 const ink = $('ink'), ghost = $('ghost');
@@ -87,9 +97,10 @@ function ingest(ev) {
   S.lastT = t;
   const r = ink.getBoundingClientRect();
   let xm = (ev.clientX - r.left) * MM_PER_PX, ym = (ev.clientY - r.top) * MM_PER_PX;
-  if (S.syn.on) { // demonstration only: same artificial tremor as the lab
-    const ph = 2 * Math.PI * S.syn.hz * t;
-    xm += S.syn.mm * Math.sin(ph); ym += S.syn.mm * Math.sin(ph + 1.0);
+  const spd = speedEst.update(t, xm, ym); // speed of the intended (un-shaken) path, mm/s
+  if (S.syn.on) { // demonstration only: same artificial tremor model as the lab
+    const [dx, dy] = tremorGen.offset(t, spd);
+    xm += dx; ym += dy;
   }
   const [fx, fy] = steadyF.step(t, xm, ym);
   const useF = S.steady && Number.isFinite(fx) && Number.isFinite(fy);
@@ -112,6 +123,7 @@ ink.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   try { ink.setPointerCapture(e.pointerId); } catch {}
   S.pointerId = e.pointerId;
+  speedEst.reset();
   steadyF.startStroke();                                   // keeps the learned tremor, restarts the line
   S.cur = { tool: S.tool, color: S.color, steady: S.steady, pts: [], raw: [], wSm: null };
   S.strokes.push(S.cur);
@@ -190,7 +202,7 @@ function syncButtons() {
   for (const b of document.querySelectorAll('.swatch')) b.setAttribute('aria-pressed', String(b.dataset.c === S.color));
   for (const b of document.querySelectorAll('.size')) b.setAttribute('aria-pressed', String(+b.dataset.s === S.size));
   $('synOn').setAttribute('aria-checked', String(S.syn.on)); $('ghostOn').setAttribute('aria-checked', String(S.ghost));
-  $('hzOut').textContent = S.syn.hz.toFixed(1) + ' Hz'; $('mmOut').textContent = S.syn.mm.toFixed(1) + ' mm';
+  for (const b of document.querySelectorAll('.preset')) b.setAttribute('aria-pressed', String(b.dataset.k === S.syn.preset));
   ghost.style.visibility = S.ghost ? 'visible' : 'hidden';
   persist();
 }
@@ -225,11 +237,14 @@ for (const s of SIZES) {
   b.addEventListener('click', () => { S.size = s; syncButtons(); closePops(); });
   $('sizes').appendChild(b);
 }
-const step = (v, d, lim) => Math.round(Math.min(lim.max, Math.max(lim.min, v + d * lim.step)) * 10) / 10;
-$('hzDown').onclick = () => { S.syn.hz = step(S.syn.hz, -1, HZ); syncButtons(); };
-$('hzUp').onclick = () => { S.syn.hz = step(S.syn.hz, +1, HZ); syncButtons(); };
-$('mmDown').onclick = () => { S.syn.mm = step(S.syn.mm, -1, MM); syncButtons(); };
-$('mmUp').onclick = () => { S.syn.mm = step(S.syn.mm, +1, MM); syncButtons(); };
+for (const [k, name, note] of DEMO_PRESETS) {
+  const b = document.createElement('button');
+  b.className = 'preset'; b.dataset.k = k; b.setAttribute('aria-pressed', 'false');
+  b.innerHTML = '<span class="p-name"></span><span class="p-note"></span>';
+  b.firstChild.textContent = name; b.lastChild.textContent = note;
+  b.addEventListener('click', () => { S.syn.preset = k; tremorGen.p = { ...PRESETS[k] }; syncButtons(); });
+  $('presetList').appendChild(b);
+}
 $('synOn').onclick = () => { S.syn.on = !S.syn.on; syncButtons(); };
 $('ghostOn').onclick = () => { S.ghost = !S.ghost; syncButtons(); };
 $('steady').onclick = () => setSteady(!S.steady);
@@ -266,7 +281,7 @@ setInterval(() => { if (S.pointerId !== null || !document.hidden) updateStatus()
 
 // ---------------------------------------------------------------- preferences (per device; drawing itself is not stored)
 function persist() {
-  try { localStorage.setItem('steady.draw.prefs', JSON.stringify({ steady: S.steady, color: S.color, size: S.size, syn: S.syn, ghost: S.ghost })); } catch {}
+  try { localStorage.setItem('steady.draw.prefs', JSON.stringify({ steady: S.steady, color: S.color, size: S.size, syn: { preset: S.syn.preset }, ghost: S.ghost })); } catch {}
 }
 function load() {
   try {
@@ -276,13 +291,11 @@ function load() {
     if (COLORS.some(([, c]) => c === p.color)) S.color = p.color;
     if (SIZES.includes(p.size)) S.size = p.size;
     if (typeof p.ghost === 'boolean') S.ghost = p.ghost;
-    if (p.syn && typeof p.syn.hz === 'number' && typeof p.syn.mm === 'number') {
-      S.syn.hz = Math.min(HZ.max, Math.max(HZ.min, p.syn.hz)); S.syn.mm = Math.min(MM.max, Math.max(MM.min, p.syn.mm));
-      // simulated tremor is never restored as "on": a real user should never be surprised by fake shake
-    }
+    if (p.syn && DEMO_PRESETS.some(([k]) => k === p.syn.preset)) S.syn.preset = p.syn.preset;
+    // simulated tremor is never restored as "on": a real user should never be surprised by fake shake
   } catch {}
 }
 
 resize(); syncButtons(); updateStatus();
 // test hook for automated checks (no effect on normal use)
-window.__steadyDraw = { S, steadyF };
+window.__steadyDraw = { S, steadyF, tremorGen };

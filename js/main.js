@@ -3,6 +3,8 @@ import { Filter2D, TremorTracker } from './filters.js';
 import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js';
 import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js';
 import { SteadySerial, ImuPlot, serialSupported } from './serial.js';
+import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js';
+import { openCompare } from './compare.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('draw'), ctx = canvas.getContext('2d');
@@ -14,7 +16,9 @@ const S = {
   filter: new Filter2D('steady'), filterName: 'steady', monitor: false,
   mon: new TremorTracker(),
   strokes: [], cur: null, drawing: false, lastT: -Infinity,
-  syn: { on: false, hz: 6, mm: 1.5 },
+  syn: { on: false, preset: 'et_moderate', custom: false, hz: PRESETS.et_moderate.f0, mm: PRESETS.et_moderate.amp },
+  gen: makeTremor('et_moderate', {}, 20240607), speed: new SpeedEstimator(0.08), // one generator, continuous in time (never restarted per stroke)
+  rec: [], recCur: null,
   lag: { ms: 0, ok: false, hist: [] }, fs: 0,
   guide: 'none', template: null, trial: null, study: null, showCal: false,
 };
@@ -70,7 +74,8 @@ function drawSeg(arr, color, width) {
 
 // ---------------------------------------------------------------- sample ingestion
 function ingest(ev, pressureFallback) {
-  const t = ev.timeStamp / 1000;
+  const tms = ev.__testT ?? ev.timeStamp; // __testT: synthetic events in automated checks only
+  const t = tms / 1000;
   if (!(t >= S.lastT)) return;
   if (S.lastT > -Infinity && t > S.lastT) {
     const dt = t - S.lastT;
@@ -79,11 +84,13 @@ function ingest(ev, pressureFallback) {
   S.lastT = t;
   const r = canvas.getBoundingClientRect();
   let xm = (ev.clientX - r.left) * S.mmPerPx, ym = (ev.clientY - r.top) * S.mmPerPx;
-  if (S.syn.on && S.syn.mm > 0) {
-    const ph = 2 * Math.PI * S.syn.hz * t;
-    xm += S.syn.mm * Math.sin(ph);
-    ym += S.syn.mm * Math.sin(ph + 1.0);
+  // speed from the UN-tremored pointer position (mm/s, EMA 80 ms); the generator always runs so it stays continuous in time
+  const spd = S.speed.update(t, xm, ym);
+  if (S.syn.on) {
+    const [dx, dy] = S.gen.offset(t, spd);
+    xm += dx; ym += dy;
   }
+  if (S.recCur) S.recCur.samples.push([t, xm, ym]); // compare view: after tremor injection, before filtering
   const [fx, fy] = S.filter.step(t, xm, ym);
   if (S.monitor) S.mon.push(t, [xm, ym]); // FFT monitor only for filters without their own tremor read-out
   updateLag(t, xm, ym, fx, fy);
@@ -92,10 +99,10 @@ function ingest(ev, pressureFallback) {
   drawSeg(S.cur.fil, INK, 2.2);
   if (S.trial) {
     const tr = S.trial;
-    if (tr.t0 === null) tr.t0 = ev.timeStamp;
-    if (S.cur.newStroke) { tr.strokeStartsMs.push(ev.timeStamp - tr.t0); S.cur.newStroke = false; }
+    if (tr.t0 === null) tr.t0 = tms;
+    if (S.cur.newStroke) { tr.strokeStartsMs.push(tms - tr.t0); S.cur.newStroke = false; }
     const p = ev.pressure > 0 ? ev.pressure : pressureFallback;
-    tr.samples.push({ t: ev.timeStamp - tr.t0, x: xm, y: ym, fx, fy, p });
+    tr.samples.push({ t: tms - tr.t0, x: xm, y: ym, fx, fy, p });
   }
 }
 
@@ -124,6 +131,9 @@ canvas.addEventListener('pointerdown', (e) => {
   canvas.setPointerCapture(e.pointerId);
   S.drawing = true; S.filter.startStroke(); S.mon.reset(); S.lag.hist = []; S.lag.ok = false;
   S.cur = { raw: [], fil: [], newStroke: true }; S.strokes.push(S.cur);
+  S.speed.reset();
+  S.recCur = S.mode === 'free' ? { samples: [] } : null;
+  if (S.recCur) { S.rec.push(S.recCur); updateCompareBtn(); }
   S.lastT = -Infinity;
   ingest(e, 0.5);
 });
@@ -133,7 +143,7 @@ canvas.addEventListener('pointermove', (e) => {
   if (!evs.length) evs.push(e);
   for (const ce of evs) ingest(ce, 0.5);
 });
-const endStroke = () => { if (S.drawing) { S.drawing = false; S.cur = null; } };
+const endStroke = () => { if (S.drawing) { S.drawing = false; S.cur = null; S.recCur = null; updateCompareBtn(); } };
 canvas.addEventListener('pointerup', endStroke);
 canvas.addEventListener('pointercancel', endStroke);
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -141,12 +151,17 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 // ---------------------------------------------------------------- free-play controls
 // A NEW filter instance (= forgetting the tremor state) is created only here, on a filter change, a new
 // participant/session, or when a study condition starts. Pen-down only calls filter.startStroke().
-function setFilter(name) { S.filterName = name; S.filter = new Filter2D(name); S.monitor = !['steady', 'steady_v1'].includes(name); S.mon.reset(); }
+function setFilter(name) { S.filterName = name; S.filter = new Filter2D(name); S.monitor = !['steady', 'steady_v2', 'steady_v1'].includes(name); S.mon.reset(); }
 $('filterSel').addEventListener('change', (e) => setFilter(e.target.value));
 $('showRaw').addEventListener('change', redraw);
 $('studyRaw').addEventListener('change', redraw);
 $('guideSel').addEventListener('change', (e) => { S.guide = e.target.value; updateTemplate(); redraw(); });
-$('btnClear').addEventListener('click', () => { S.strokes = []; S.cur = null; redraw(); });
+$('btnClear').addEventListener('click', () => { S.strokes = []; S.cur = null; S.rec = []; S.recCur = null; updateCompareBtn(); redraw(); });
+function updateCompareBtn() { $('btnCompare').disabled = !(S.mode === 'free' && S.rec.some((r) => r.samples.length >= 5)) || S.drawing; }
+$('btnCompare').addEventListener('click', () => {
+  const rec = S.rec.filter((r) => r.samples.length >= 2);
+  if (rec.length) openCompare(rec, () => $('btnCompare').focus());
+});
 $('modeFree').addEventListener('click', () => setMode('free'));
 $('modeStudy').addEventListener('click', () => setMode('study'));
 function setMode(m) {
@@ -157,16 +172,32 @@ function setMode(m) {
   $('guideLbl').hidden = m === 'study';
   $('filterSel').disabled = m === 'study';
   $('banner').textContent = '';
-  S.strokes = []; S.cur = null; S.trial = null;
+  S.strokes = []; S.cur = null; S.trial = null; S.rec = []; S.recCur = null; updateCompareBtn();
   if (m === 'free') setFilter($('filterSel').value);
   updateTemplate(); redraw();
 }
 
-const syn = () => {
-  S.syn.on = $('synOn').checked; S.syn.hz = +$('synHz').value; S.syn.mm = +$('synMm').value;
-  $('synHzO').textContent = S.syn.hz.toFixed(1); $('synMmO').textContent = S.syn.mm.toFixed(1);
-};
-['synOn', 'synHz', 'synMm'].forEach((id) => $(id).addEventListener('input', () => { syn(); mirrorMotor(); }));
+// Synthetic tremor UI: preset dropdown fills frequency + amplitude; editing them makes it "Custom (based on X)".
+const selP = $('synPreset');
+for (const k of PRESET_ORDER) selP.add(new Option(PRESETS[k].name, k));
+const optCustom = new Option('Custom', 'custom'); optCustom.hidden = true; selP.add(optCustom);
+const clampN = (v, lo, hi, d) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
+function applyGen() { S.gen.p = { ...PRESETS[S.syn.preset], f0: S.syn.hz, amp: S.syn.mm }; } // keeps phase/OU state: continuous in time
+function synUi() {
+  S.syn.on = $('synOn').checked;
+  if (S.syn.custom) { optCustom.hidden = false; optCustom.text = `Custom (based on ${PRESETS[S.syn.preset].name})`; selP.value = 'custom'; }
+  else { optCustom.hidden = true; selP.value = S.syn.preset; }
+  $('synNote').textContent = S.syn.custom ? '' : PRESETS[S.syn.preset].note;
+}
+function synPick(key) {
+  S.syn.preset = key; S.syn.custom = false; S.syn.hz = PRESETS[key].f0; S.syn.mm = PRESETS[key].amp;
+  $('synHz').value = S.syn.hz; $('synMm').value = S.syn.mm; applyGen(); synUi();
+}
+selP.addEventListener('change', () => { if (selP.value !== 'custom') synPick(selP.value); mirrorMotor(); });
+$('synHz').addEventListener('input', (e) => { const v = clampN(+e.target.value, 3, 12, NaN); if (!Number.isFinite(v)) return; S.syn.hz = v; S.syn.custom = true; applyGen(); synUi(); mirrorMotor(); });
+$('synMm').addEventListener('input', (e) => { const v = clampN(+e.target.value, 0, 10, NaN); if (!Number.isFinite(v)) return; S.syn.mm = v; S.syn.custom = true; applyGen(); synUi(); mirrorMotor(); });
+$('synOn').addEventListener('input', () => { synUi(); mirrorMotor(); });
+const synLabel = () => (!S.syn.on ? 'none' : S.syn.custom ? `custom(based_on=${S.syn.preset})` : S.syn.preset);
 
 // calibration
 function setCal(v) {
@@ -248,7 +279,7 @@ function finishTrial() {
     samples: S.trial.samples, strokeStartsMs: S.trial.strokeStartsMs,
     meta: {
       created: new Date().toISOString(), mmPerPx: S.mmPerPx.toFixed(5),
-      synHz: S.syn.on ? S.syn.hz.toFixed(2) : '0', synMm: S.syn.on ? S.syn.mm.toFixed(2) : '0',
+      synHz: S.syn.on ? S.syn.hz.toFixed(2) : '0', synMm: S.syn.on ? S.syn.mm.toFixed(2) : '0', tremorPreset: synLabel(),
       row: st.row + 1, position: st.ci + 1,
       template: sp ? `spiral cx_mm=${cx.toFixed(3)} cy_mm=${cy.toFixed(3)} r0_mm=${sp.r0} b_mm_per_rad=${sp.b.toFixed(5)} turns=${sp.turns} theta0=0 image_coords_y_down`
         : (S.template?.polyline.length ? `${st.task} centre_mm=${cx.toFixed(3)},${cy.toFixed(3)} polyline_mm=${S.template.polyline.map(([x, y]) => `${x.toFixed(1)}:${y.toFixed(1)}`).join(';')}` : 'none'),
@@ -325,7 +356,7 @@ $('btnPing').addEventListener('click', () => ser.ping());
 $('imuGroup').addEventListener('change', (e) => { plot.group = e.target.value; });
 function mirrorMotor() {
   if (!ser.connected) return;
-  if ($('motorMirror').checked && S.syn.on) ser.setTremor(S.syn.hz, (S.syn.mm / 4) * 100); else ser.stopTremor();
+  if ($('motorMirror').checked && S.syn.on) ser.setTremor(S.syn.hz, Math.min(100, (S.syn.mm / 4) * 100)); else ser.stopTremor();
 }
 $('motorMirror').addEventListener('change', mirrorMotor);
 
@@ -349,5 +380,5 @@ function updateReadouts() {
 
 // ---------------------------------------------------------------- boot
 window.addEventListener('resize', resize);
-syn(); resize(); requestAnimationFrame(updateReadouts);
+synPick('et_moderate'); resize(); requestAnimationFrame(updateReadouts);
 window.__steady = S; // handy for debugging in the console

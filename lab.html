@@ -24,7 +24,8 @@
           <option value="raw">raw</option>
           <option value="ema">ema (2 Hz)</option>
           <option value="one_euro">one-euro</option>
-          <option value="steady" selected>steady (v2: oscillator bank)</option>
+          <option value="steady" selected>steady (v3: gated oscillator bank)</option>
+          <option value="steady_v2">steady v2 (no gate, free play only)</option>
           <option value="steady_v1">steady v1 (old, free play only)</option>
         </select>
       </label>
@@ -40,15 +41,20 @@
       </dl>
       <div class="bar"><div id="confBar"></div></div>
       <button id="btnClear">Clear canvas</button>
+      <button id="btnCompare" disabled>Compare filters on this drawing</button>
     </section>
 
     <section id="secTremor">
       <h2>Synthetic tremor</h2>
       <label class="chk"><input type="checkbox" id="synOn"> inject into pointer stream</label>
-      <label>Frequency <output id="synHzO">6.0</output> Hz
-        <input type="range" id="synHz" min="3" max="12" step="0.1" value="6"></label>
-      <label>Amplitude <output id="synMmO">1.5</output> mm
-        <input type="range" id="synMm" min="0" max="4" step="0.1" value="1.5"></label>
+      <label>Tremor type
+        <select id="synPreset"></select></label>
+      <p class="hint" id="synNote"></p>
+      <label>Frequency (Hz)
+        <input type="number" id="synHz" min="3" max="12" step="0.1" value="6.5"></label>
+      <label>Amplitude (mm, peak, 0-10)
+        <input type="number" id="synMm" min="0" max="10" step="0.1" value="2.5"></label>
+      <p class="hint">Realistic model: frequency drifts, size waxes and wanes, elliptical, speed-dependent. Choosing a type fills both numbers; editing them makes it Custom.</p>
     </section>
 
     <section id="secCal">

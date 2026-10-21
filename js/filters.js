@@ -513,18 +513,61 @@ export class SteadyV2 {
   tremor_amp_mm() { let s = 0; for (const v of this.act) s += v; return Math.sqrt(s); }
 }
 
+/**
+ * Steady v3 = SteadyV2 tremor cancellation, applied only as far as clear tremor is present, then a 10 Hz EMA finish.
+ * Exact port of SteadyV3 in software/core/steady/filters.py (parity: shared/test_vectors/steady_v3_kalman.json).
+ *   y2 = v2.step(t,z); g_t = clip((amp - gate_lo)/(gate_hi - gate_lo), 0, 1), amp = v2.tremor_amp_mm()
+ *   g += (g_t - g)(1 - exp(-dt/tau_g)) (first output: g = g_t);  out = EMA(fin_fc).step(t, g*y2 + (1-g)*z)
+ * Why: on small or irregular tremor the oscillator bank has little to remove and can add error, so the gate falls
+ * back to plain light smoothing; with real rhythmic tremor it cancels it (see docs/07-review-and-research.md).
+ */
+export class SteadyV3 {
+  constructor({ gate_lo = 0.1, gate_hi = 0.3, tau_g = 0.3, fin_fc = 10.0, v2 = {}, ...rest } = {}) {
+    this.inner = new SteadyV2({ ...v2, ...rest });
+    this.gate_lo = gate_lo; this.gate_hi = gate_hi; this.tau_g = tau_g;
+    this.fin = new EMAFilter({ fc: fin_fc });
+    this.freqs = this.inner.freqs;
+    this.reset();
+  }
+  reset() { this.inner.reset(); this.fin.reset(); this.g = 0; this.gInit = false; this.t = null; this.out = NaN; }
+  startStroke() { this.inner.startStroke(); this.fin.reset(); this.t = null; }
+  start_stroke() { this.startStroke(); }
+  _gateTarget() {
+    if (this.gate_lo < 0) return 1;
+    const amp = this.inner.tremor_amp_mm();
+    return Math.min(1, Math.max(0, (amp - this.gate_lo) / (this.gate_hi - this.gate_lo)));
+  }
+  step(t, z) {
+    const y2 = this.inner.step(t, z);
+    if (!(Number.isFinite(y2) && Number.isFinite(t))) return this.out;
+    if (!Number.isFinite(z)) z = y2;
+    const gt = this._gateTarget();
+    if (!this.gInit) { this.g = gt; this.gInit = true; }
+    else if (this.t !== null && t > this.t) this.g += (gt - this.g) * (1 - Math.exp(-(t - this.t) / this.tau_g));
+    if (this.t === null || t > this.t) this.t = t;
+    this.out = this.fin.step(t, this.g * y2 + (1 - this.g) * z);
+    return this.out;
+  }
+  get act() { return this.inner.act; }
+  get w() { return this.inner.w; }
+  tremor_hz() { return this.inner.tremor_hz(); }
+  tremor_conf() { return this.inner.tremor_conf(); }
+  tremor_amp_mm() { return this.inner.tremor_amp_mm(); }
+}
+
 // ---------------------------------------------------------------- factory / 2-D wrapper
 /** Filters offered as study conditions (steady_v1 is deliberately absent). */
 export const FILTER_NAMES = ['raw', 'ema', 'one_euro', 'steady'];
 /** Filters selectable in free play. */
-export const FREE_FILTER_NAMES = [...FILTER_NAMES, 'steady_v1'];
+export const FREE_FILTER_NAMES = [...FILTER_NAMES, 'steady_v2', 'steady_v1'];
 
 export function makeFilter(name, opts = {}) {
   switch (name) {
     case 'raw': return new RawFilter();
     case 'ema': return new EMAFilter(opts);
     case 'one_euro': return new OneEuroFilter(opts);
-    case 'steady': return new SteadyV2(opts);
+    case 'steady': return new SteadyV3(opts);
+    case 'steady_v2': return new SteadyV2(opts);
     case 'steady_v1': return new SteadyFilter(opts);
     default: throw new Error(`unknown filter ${name}`);
   }
@@ -561,7 +604,7 @@ export class Filter2D {
    * amp = sqrt(mean over axes of sum(act_mix)) (per-axis amplitude).
    */
   info() {
-    if (this.name === 'steady') {
+    if (this.name === 'steady' || this.name === 'steady_v2') {
       const ax = this.fx.act, ay = this.fy.act, K = ax.length;
       if (!this._sum || this._sum.length !== K) this._sum = new Float64Array(K);
       const a = this._sum; let tot = 0;

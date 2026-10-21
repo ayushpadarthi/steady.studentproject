@@ -42,6 +42,7 @@ export function trialCsv(trial) {
     `# mm_per_px=${m.mmPerPx}`,
     `# synthetic_tremor_hz=${m.synHz}`,
     `# synthetic_tremor_mm=${m.synMm}`,
+    `# tremor_preset=${m.tremorPreset ?? 'none'}`,
     `# latin_square_row=${m.row ?? ''}`,
     `# condition_position=${m.position ?? ''}`,
     `# stroke_starts_ms=${trial.strokeStartsMs.map((v) => f(v, 3)).join(';')}`,

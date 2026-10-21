@@ -1,6 +1,6 @@
 // Run with:  node software/app/tests/filters.test.mjs   (no dependencies)
 // Also importable from a browser page: `import { runTests } from './tests/filters.test.mjs'`.
-import { RawFilter, EMAFilter, OneEuroFilter, SteadyFilter, SteadyV2, Filter2D, FILTER_NAMES, FREE_FILTER_NAMES, TremorTracker, fft, makeFilter } from '../js/filters.js';
+import { RawFilter, EMAFilter, OneEuroFilter, SteadyFilter, SteadyV2, SteadyV3, Filter2D, FILTER_NAMES, FREE_FILTER_NAMES, TremorTracker, fft, makeFilter } from '../js/filters.js';
 
 const results = [];
 const defaultLoader = async (rel) => { // browser: fetch relative to this module (serve software/)
@@ -99,7 +99,7 @@ export async function runTests(loadFile = defaultLoader) {
   check('study conditions exclude steady_v1; free play includes it', FILTER_NAMES.join() === 'raw,ema,one_euro,steady' && FREE_FILTER_NAMES.includes('steady_v1'));
   {
     const f2 = new Filter2D('steady');
-    check('Filter2D(steady) = two independent SteadyV2', f2.fx instanceof SteadyV2 && f2.fy instanceof SteadyV2 && f2.fx !== f2.fy);
+    check('Filter2D(steady) = two independent SteadyV3 (gated v2)', f2.fx instanceof SteadyV3 && f2.fy instanceof SteadyV3 && f2.fx !== f2.fy && new Filter2D('steady_v2').fx instanceof SteadyV2);
     const { t, z } = sine(120, 3, 6, 1.0);
     for (let i = 0; i < t.length; i++) f2.step(t[i], z[i], 0);
     const before = f2.info();
@@ -164,6 +164,28 @@ export async function runTests(loadFile = defaultLoader) {
       check('parity steady v2 output < 1e-9', eOut < 1e-9 && nanMis === 0, d);
       check('parity steady v2 tremor_hz < 1e-9 (NaN pattern equal)', eHz < 1e-9 && hzNanMis === 0, `hz err ${eHz.toExponential(2)} nanMismatch=${hzNanMis}`);
       check('parity steady v2 mixer weights < 1e-9', eW < 1e-9, `w err ${eW.toExponential(2)}`);
+    }
+  }
+  // --- parity: SteadyV3 (gated v2 + EMA finish) vs steady_v3_kalman.json (abs tol 1e-9), incl. the gate value
+  {
+    const path = '../../shared/test_vectors/steady_v3_kalman.json';
+    let txt = null;
+    try { txt = loadFile ? await loadFile(path) : null; } catch { txt = null; }
+    if (txt == null) console.log('SKIP parity v3: steady_v3_kalman.json not found.');
+    else {
+      const c = JSON.parse(txt).steady_v3, nn = (a) => a.map((x) => (x === null ? NaN : x));
+      const t = nn(c.t), z = nn(c.z), e = nn(c.expected), eg = c.expected_g;
+      const f = new SteadyV3(c.params);
+      let eOut = 0, eG = 0, nanMis = 0;
+      for (let i = 0; i < t.length; i++) {
+        if (c.stroke_start[i]) f.start_stroke();
+        const y = f.step(t[i], z[i]);
+        if (Number.isNaN(e[i]) || Number.isNaN(y)) { if (Number.isNaN(e[i]) !== Number.isNaN(y)) nanMis++; } else eOut = Math.max(eOut, Math.abs(y - e[i]));
+        eG = Math.max(eG, Math.abs(f.g - eg[i]));
+      }
+      results.parity ??= {}; results.parity.steady_v3 = eOut; results.parity.steady_v3_gate = eG;
+      check('parity steady v3 output < 1e-9', eOut < 1e-9 && nanMis === 0, `n=${t.length} max|err| out=${eOut.toExponential(2)} gate=${eG.toExponential(2)} nanMismatch=${nanMis}`);
+      check('parity steady v3 gate < 1e-9', eG < 1e-9, `gate err ${eG.toExponential(2)}`);
     }
   }
   // --- performance (informational): SteadyV2 x 2 axes, ms per sample, irregular 1000 Hz-ish stream

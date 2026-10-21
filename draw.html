@@ -51,8 +51,7 @@
   <p class="pop-title">Demonstration</p>
   <p class="pop-note">Adds an artificial shake to your input so you can see what Steady removes. Leave it off for real use.</p>
   <button id="synOn" class="row-switch" role="switch" aria-checked="false"><span>Simulate tremor</span><span class="mini"><span class="knob"></span></span></button>
-  <div class="stepper"><span>Rhythm</span><button id="hzDown" aria-label="Slower shake">&minus;</button><output id="hzOut">6.0 Hz</output><button id="hzUp" aria-label="Faster shake">+</button></div>
-  <div class="stepper"><span>Size</span><button id="mmDown" aria-label="Smaller shake">&minus;</button><output id="mmOut">1.5 mm</output><button id="mmUp" aria-label="Larger shake">+</button></div>
+  <div id="presetList" class="presets" role="group" aria-label="Kind of tremor to simulate"></div>
   <button id="ghostOn" class="row-switch" role="switch" aria-checked="false"><span>Show the raw, shaky line</span><span class="mini"><span class="knob"></span></span></button>
   <p class="pop-foot"><a href="lab.html">Open the lab</a> for measurements and studies.</p>
 </div>
