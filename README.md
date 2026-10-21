@@ -44,7 +44,7 @@ Tremor does not stop when the pen lifts, so the filter must not forget it on eve
 
 ## Files
 - `js/settle.js` ink settling (zero-phase smoothing of finished strokes; `settle`, `adaptiveParams`, `adaptiveSettle`).
-- `js/tremor.js` realistic synthetic tremor (irregular since 2026-10-20: fast amplitude changes, frequency wander, wandering axis) (port of `software/core/steady/tremor_models.py`; `PRESETS`, `PRESET_ORDER`, `makeTremor(key, overrides, seed)`, `SpeedEstimator`). `js/compare.js` the compare-filters overlay maths and view.
+- `js/tremor.js` realistic synthetic tremor (irregular since 2026-10-20: fast amplitude changes, frequency wander, wandering axis) (port of `software/core/steady/tremor_models.py`; `PRESETS`, `PRESET_ORDER`, `makeTremor(key, overrides, seed)`, `SpeedEstimator`). `js/compare.js` the compare-filters overlay: 'While drawing' vs 'Final line (after pen-up)' (only Steady settles), with wiggle, lag while drawing, and 'off the line' (distance from the intended path, available when tremor is simulated because the lab then records the pre-tremor pointer position).
 - `js/filters.js` filters above, `TremorTracker` (port of `tremor_estimator.py`, used by steady_v1 and as the read-out for ema/one_euro), `Filter2D`.
 - `js/tasks.js` spiral/line/square templates and quick metrics. `js/study.js` Latin square + CSV writers. `js/serial.js` Web Serial. `js/main.js` UI.
 

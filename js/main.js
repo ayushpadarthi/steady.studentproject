@@ -1,10 +1,10 @@
 // Steady app: drawing canvas, live filters, synthetic tremor, study mode, optional serial.
-import { Filter2D, TremorTracker } from './filters.js';
-import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js';
-import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js';
-import { SteadySerial, ImuPlot, serialSupported } from './serial.js';
-import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js';
-import { openCompare } from './compare.js';
+import { Filter2D, TremorTracker } from './filters.js?v=10';
+import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=10';
+import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=10';
+import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=10';
+import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=10';
+import { openCompare } from './compare.js?v=10';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('draw'), ctx = canvas.getContext('2d');
@@ -86,11 +86,12 @@ function ingest(ev, pressureFallback) {
   let xm = (ev.clientX - r.left) * S.mmPerPx, ym = (ev.clientY - r.top) * S.mmPerPx;
   // speed from the UN-tremored pointer position (mm/s, EMA 80 ms); the generator always runs so it stays continuous in time
   const spd = S.speed.update(t, xm, ym);
+  const ix = xm, iy = ym; // the intended position (before any simulated tremor): lets Compare measure accuracy
   if (S.syn.on) {
     const [dx, dy] = S.gen.offset(t, spd);
     xm += dx; ym += dy;
   }
-  if (S.recCur) S.recCur.samples.push([t, xm, ym]); // compare view: after tremor injection, before filtering
+  if (S.recCur) S.recCur.samples.push(S.syn.on ? [t, xm, ym, ix, iy] : [t, xm, ym]); // compare view: after tremor injection, before filtering (+ intended when simulated)
   const [fx, fy] = S.filter.step(t, xm, ym);
   if (S.monitor) S.mon.push(t, [xm, ym]); // FFT monitor only for filters without their own tremor read-out
   updateLag(t, xm, ym, fx, fy);
@@ -128,7 +129,7 @@ function canDraw() {
 canvas.addEventListener('pointerdown', (e) => {
   if (!canDraw() || (e.pointerType === 'mouse' && e.button !== 0)) return;
   e.preventDefault();
-  canvas.setPointerCapture(e.pointerId);
+  try { canvas.setPointerCapture(e.pointerId); } catch {} // can throw for synthetic events (automated checks)
   S.drawing = true; S.filter.startStroke(); S.mon.reset(); S.lag.hist = []; S.lag.ok = false;
   S.cur = { raw: [], fil: [], newStroke: true }; S.strokes.push(S.cur);
   S.speed.reset();
