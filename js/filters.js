@@ -557,17 +557,25 @@ export class SteadyV3 {
 }
 
 // ---------------------------------------------------------------- factory / 2-D wrapper
+/** Steady v4 (2026-10-21) = SteadyV3 algorithm with settings retuned on realistic tremor (same as V4_PARAMS in
+ *  software/core/steady/filters.py; parity vs shared/test_vectors/steady_v4_kalman.json). */
+export const V4_PARAMS = { gate_lo: 0.1, gate_hi: 0.3, tau_g: 0.3, fin_fc: 10.0, rho: 0.996, r: 0.024, q_t: 1e-4, act_gain: 1.5e-2 };
+export class SteadyV4 extends SteadyV3 {
+  constructor(opts = {}) { super({ ...V4_PARAMS, ...opts }); }
+}
+
 /** Filters offered as study conditions (steady_v1 is deliberately absent). */
 export const FILTER_NAMES = ['raw', 'ema', 'one_euro', 'steady'];
 /** Filters selectable in free play. */
-export const FREE_FILTER_NAMES = [...FILTER_NAMES, 'steady_v2', 'steady_v1'];
+export const FREE_FILTER_NAMES = [...FILTER_NAMES, 'steady_v3', 'steady_v2', 'steady_v1'];
 
 export function makeFilter(name, opts = {}) {
   switch (name) {
     case 'raw': return new RawFilter();
     case 'ema': return new EMAFilter(opts);
     case 'one_euro': return new OneEuroFilter(opts);
-    case 'steady': return new SteadyV3(opts);
+    case 'steady': return new SteadyV4(opts);
+    case 'steady_v3': return new SteadyV3(opts);
     case 'steady_v2': return new SteadyV2(opts);
     case 'steady_v1': return new SteadyFilter(opts);
     default: throw new Error(`unknown filter ${name}`);
@@ -605,7 +613,7 @@ export class Filter2D {
    * amp = sqrt(mean over axes of sum(act_mix)) (per-axis amplitude).
    */
   info() {
-    if (this.name === 'steady' || this.name === 'steady_v2') {
+    if (this.name === 'steady' || this.name === 'steady_v3' || this.name === 'steady_v2') {
       const ax = this.fx.act, ay = this.fy.act, K = ax.length;
       if (!this._sum || this._sum.length !== K) this._sum = new Float64Array(K);
       const a = this._sum; let tot = 0;

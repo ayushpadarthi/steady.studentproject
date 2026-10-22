@@ -1,10 +1,10 @@
 // Steady app: drawing canvas, live filters, synthetic tremor, study mode, optional serial.
-import { Filter2D, TremorTracker } from './filters.js?v=10';
-import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=10';
-import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=10';
-import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=10';
-import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=10';
-import { openCompare } from './compare.js?v=10';
+import { Filter2D, TremorTracker } from './filters.js?v=11';
+import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=11';
+import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=11';
+import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=11';
+import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=11';
+import { openCompare } from './compare.js?v=11';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('draw'), ctx = canvas.getContext('2d');
@@ -152,7 +152,7 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 // ---------------------------------------------------------------- free-play controls
 // A NEW filter instance (= forgetting the tremor state) is created only here, on a filter change, a new
 // participant/session, or when a study condition starts. Pen-down only calls filter.startStroke().
-function setFilter(name) { S.filterName = name; S.filter = new Filter2D(name); S.monitor = !['steady', 'steady_v2', 'steady_v1'].includes(name); S.mon.reset(); }
+function setFilter(name) { S.filterName = name; S.filter = new Filter2D(name); S.monitor = !['steady', 'steady_v3', 'steady_v2', 'steady_v1'].includes(name); S.mon.reset(); }
 $('filterSel').addEventListener('change', (e) => setFilter(e.target.value));
 $('showRaw').addEventListener('change', redraw);
 $('studyRaw').addEventListener('change', redraw);

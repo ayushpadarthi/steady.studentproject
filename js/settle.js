@@ -3,7 +3,9 @@
 // after pen-up there is no lag to worry about, so the whole stroke is low-passed forwards and backwards
 // (zero phase). The amount follows the tremor Steady detected (same rule as steady/eval_settle.py).
 export const FS = 120, PAD_S = 0.25;
-export const K = 0.5, BASE_FC = 8.0, LO = 0.1, HI = 0.3;
+// LO/HI = tremor size (mm) where settling starts / is fully on. 0.2/0.4 since 2026-10-21 (re-picked on TRAIN for
+// Steady v4, which reads healthy hands a little higher; = eval_settle.V4_LO/V4_HI). v3 used 0.1/0.3.
+export const K = 0.5, BASE_FC = 8.0, LO = 0.2, HI = 0.4;
 
 export function butter2(fc, fs = FS) {
   const k = Math.tan(Math.PI * fc / fs), q = 1 / Math.sqrt(2), n = 1 / (1 + k / q + k * k), b0 = k * k * n;

@@ -2,7 +2,7 @@
 // Also importable from a browser page: `import { runTests } from './tests/filters.test.mjs'`.
 import { settle, clampTo, clampMm } from '../js/settle.js';
 import { ShakeTracker } from '../js/shakestyle.js';
-import { RawFilter, EMAFilter, OneEuroFilter, SteadyFilter, SteadyV2, SteadyV3, Filter2D, FILTER_NAMES, FREE_FILTER_NAMES, TremorTracker, fft, makeFilter } from '../js/filters.js';
+import { RawFilter, EMAFilter, OneEuroFilter, SteadyFilter, SteadyV2, SteadyV3, SteadyV4, Filter2D, FILTER_NAMES, FREE_FILTER_NAMES, TremorTracker, fft, makeFilter } from '../js/filters.js';
 
 const results = [];
 const defaultLoader = async (rel) => { // browser: fetch relative to this module (serve software/)
@@ -101,7 +101,7 @@ export async function runTests(loadFile = defaultLoader) {
   check('study conditions exclude steady_v1; free play includes it', FILTER_NAMES.join() === 'raw,ema,one_euro,steady' && FREE_FILTER_NAMES.includes('steady_v1'));
   {
     const f2 = new Filter2D('steady');
-    check('Filter2D(steady) = two independent SteadyV3 (gated v2)', f2.fx instanceof SteadyV3 && f2.fy instanceof SteadyV3 && f2.fx !== f2.fy && new Filter2D('steady_v2').fx instanceof SteadyV2);
+    check('Filter2D(steady) = two independent SteadyV4 (= gated v2, v4 settings)', f2.fx instanceof SteadyV3 && f2.fy instanceof SteadyV3 && f2.fx !== f2.fy && new Filter2D('steady_v2').fx instanceof SteadyV2);
     const { t, z } = sine(120, 3, 6, 1.0);
     for (let i = 0; i < t.length; i++) f2.step(t[i], z[i], 0);
     const before = f2.info();
@@ -240,6 +240,26 @@ export async function runTests(loadFile = defaultLoader) {
     // the real filter exposes the zero-lag estimate used for the shake
     const f = new Filter2D('steady'); for (let i = 0; i < 240; i++) f.step(i / 120, 10 * i / 120 + 2 * Math.sin(2 * Math.PI * 6 * i / 120), 0);
     check('SteadyV3 exposes y2 (zero-lag estimate) for Shake style', Number.isFinite(f.fx.y2) && Number.isFinite(f.fy.y2));
+  }
+  // --- parity: SteadyV4 (SteadyV3 algorithm, V4_PARAMS) vs steady_v4_kalman.json (abs tol 1e-9), incl. gate and y2
+  {
+    let txt = null;
+    try { txt = loadFile ? await loadFile('../../shared/test_vectors/steady_v4_kalman.json') : null; } catch { txt = null; }
+    if (txt == null) console.log('SKIP parity v4: steady_v4_kalman.json not found.');
+    else {
+      const v = JSON.parse(txt).steady_v4, f = new SteadyV4(); let e = 0, eg = 0, ey = 0, nanMis = 0;
+      const nn = (a) => a.map((x) => (x === null ? NaN : x));
+      const t = v.t, z = nn(v.z), ex = nn(v.expected), ey2 = nn(v.expected_y2);
+      for (let k = 0; k < t.length; k++) {
+        if (v.stroke_start[k]) f.startStroke();
+        const y = f.step(t[k], z[k]);
+        if (Number.isNaN(ex[k]) !== Number.isNaN(y)) nanMis++; else if (!Number.isNaN(y)) e = Math.max(e, Math.abs(y - ex[k]));
+        eg = Math.max(eg, Math.abs(f.g - v.expected_g[k]));
+        if (Number.isFinite(ey2[k]) && Number.isFinite(f.y2)) ey = Math.max(ey, Math.abs(f.y2 - ey2[k]));
+      }
+      check('parity steady v4 (JS = Python) < 1e-9 incl. gate and y2', e < 1e-9 && eg < 1e-9 && ey < 1e-9 && nanMis === 0, `out ${e.toExponential(2)} g ${eg.toExponential(2)} y2 ${ey.toExponential(2)} nanMis ${nanMis}`);
+    }
+    check("makeFilter('steady') is SteadyV4", new Filter2D('steady').fx instanceof SteadyV4);
   }
   {
     const f2 = new Filter2D('steady'); const now = (typeof performance !== 'undefined' ? performance : Date);
