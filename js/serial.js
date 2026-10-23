@@ -6,7 +6,7 @@ export const serialSupported = () => typeof navigator !== 'undefined' && 'serial
 export class SteadySerial {
   constructor() {
     this.port = null; this.reader = null; this.writer = null; this.connected = false;
-    this.onSample = () => {}; this.onLine = () => {}; this.onStatus = () => {};
+    this.onSample = () => {}; this.onCommand = () => {}; this.onLine = () => {}; this.onStatus = () => {};
     this.nSamples = 0;
   }
   async connect(baudRate = 921600) {
@@ -54,6 +54,11 @@ export class SteadySerial {
       }
       return;
     }
+    if (s[0] === 'C') { // v2 pen: commanded tip offset "C,<t_us>,<mm>"
+      const p = s.split(',');
+      if (p.length === 3) { const t = Number(p[1]), mm = Number(p[2]); if (Number.isFinite(t) && Number.isFinite(mm)) this.onCommand({ t_us: t, mm }); }
+      return;
+    }
     this.onLine(s); // '# ...' comments, '# pong', etc.
   }
   async _send(str) {
@@ -62,7 +67,15 @@ export class SteadySerial {
     return true;
   }
   ping() { return this._send('P\n'); }
-  /** Drive the tremor-injector motor. freq_hz > 0, amp_pct 0-100. */
+  /** v2 servo pen: shake at f0 Hz with peak tip offset ampMm; irregular = realistic (drifting) tremor. */
+  shake(f0, ampMm, irregular) {
+    const f = Math.max(0, +f0 || 0), a = Math.max(0, +ampMm || 0);
+    return this._send(`T,${f.toFixed(2)},${a.toFixed(2)},${irregular ? 1 : 0}\n`);
+  }
+  stopShake() { return this._send('X\n'); }
+  /** Shaft-to-tip distance of the servo pen, mm (10-120). */
+  setArm(mm) { return this._send(`L,${(+mm).toFixed(1)}\n`); }
+  /** v1 (motor) pen: drive the tremor-injector motor. freq_hz > 0, amp_pct 0-100. */
   setTremor(freq, ampPct) {
     const f = Math.max(0, +freq || 0), a = Math.min(100, Math.max(0, +ampPct || 0));
     return this._send(`M,${f.toFixed(2)},${a.toFixed(1)}\n`);

@@ -1,9 +1,9 @@
 // Steady drawing app. Uses the SAME filter code as the lab (js/filters.js), so study results apply to it.
-import { Filter2D } from './filters.js?v=11';
-import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=11';
-import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=11';
-import { openReplay } from './replay.js?v=11';
-import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=11';
+import { Filter2D } from './filters.js?v=12';
+import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=12';
+import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=12';
+import { openReplay } from './replay.js?v=12';
+import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=12';
 
 const $ = (id) => document.getElementById(id);
 const MM_PER_PX = 0.2646; // same default as the lab (96 px/in); the filter's parameters are in millimetres

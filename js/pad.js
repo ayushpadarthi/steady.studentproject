@@ -5,9 +5,9 @@
 //   live = what Steady drew while the pen was down
 //   pts  = the final line on screen (live, settled after pen-up when Smoothing is on; raw when Steady is off)
 // All coordinates are CSS pixels on the canvas.
-import { Filter2D } from './filters.js?v=11';
-import { makeTremor, SpeedEstimator, PRESETS } from './tremor.js?v=11';
-import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=11';
+import { Filter2D } from './filters.js?v=12';
+import { makeTremor, SpeedEstimator, PRESETS } from './tremor.js?v=12';
+import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=12';
 
 export const MM_PER_PX = 0.2646;
 export const SMOOTH_K = { off: null, smooth: 0.5, extra: 0.3 };

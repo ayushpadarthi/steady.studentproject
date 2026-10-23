@@ -41,3 +41,4 @@ button.primary { background:var(--ink); color:#fff; }
 .cmp-views button { min-height:44px; padding:0 14px; border:1px solid var(--line); border-radius:8px; background:#fff; cursor:pointer; font:inherit; }
 .cmp-views button[aria-pressed="true"] { border-color:var(--ink); box-shadow:inset 0 0 0 2px var(--ink); font-weight:600; }
 .cmp-stats { flex-wrap:wrap; column-gap:16px; }
+.truth { border:1px solid var(--line); border-radius:6px; padding:6px 8px; margin:6px 0; } .truth p { margin:2px 0; }

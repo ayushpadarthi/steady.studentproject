@@ -1,10 +1,11 @@
 // Steady app: drawing canvas, live filters, synthetic tremor, study mode, optional serial.
-import { Filter2D, TremorTracker } from './filters.js?v=11';
-import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=11';
-import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=11';
-import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=11';
-import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=11';
-import { openCompare } from './compare.js?v=11';
+import { Filter2D, TremorTracker } from './filters.js?v=12';
+import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=12';
+import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=12';
+import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=12';
+import { PenMeter } from './penmeter.js?v=12';
+import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=12';
+import { openCompare } from './compare.js?v=12';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('draw'), ctx = canvas.getContext('2d');
@@ -13,7 +14,7 @@ const INK = '#14213d', GREY = '#a3a8ad';
 // ---------------------------------------------------------------- state
 const S = {
   mode: 'free', mmPerPx: 0.2646, w: 0, h: 0,
-  filter: new Filter2D('steady'), filterName: 'steady', monitor: false,
+  filter: new Filter2D('steady'), filterName: 'steady', monitor: false, penShake: false,
   mon: new TremorTracker(),
   strokes: [], cur: null, drawing: false, lastT: -Infinity,
   syn: { on: false, preset: 'et_moderate', custom: false, hz: PRESETS.et_moderate.f0, mm: PRESETS.et_moderate.amp },
@@ -87,7 +88,7 @@ function ingest(ev, pressureFallback) {
   // speed from the UN-tremored pointer position (mm/s, EMA 80 ms); the generator always runs so it stays continuous in time
   const spd = S.speed.update(t, xm, ym);
   const ix = xm, iy = ym; // the intended position (before any simulated tremor): lets Compare measure accuracy
-  if (S.syn.on) {
+  if (S.syn.on && !S.penShake) { // when the real pen shakes, no fake shake is added
     const [dx, dy] = S.gen.offset(t, spd);
     xm += dx; ym += dy;
   }
@@ -341,25 +342,63 @@ if (!serialSupported()) {
   $('btnConnect').disabled = true;
   $('serialNote').textContent = 'Web Serial is not available here (use Chrome or Edge over http://localhost). The rest of the app works without it.';
 } else $('serialNote').textContent = 'Connect the Steady pen (921600 baud). Optional.';
-ser.onSample = (s) => plot.add(s);
+const meter = new PenMeter(25), truthRows = [];
+ser.onSample = (s) => { plot.add(s); meter.addSample(s); };
+ser.onCommand = (c) => meter.addCommand(c);
 ser.onLine = (l) => slog(l);
 ser.onStatus = (s) => {
   slog(`[${s}]`);
   const on = ser.connected;
   $('btnConnect').textContent = on ? 'Disconnect' : 'Connect';
-  $('btnPing').disabled = !on; $('motorMirror').disabled = !on;
-  if (!on) $('motorMirror').checked = false;
+  $('btnPing').disabled = !on; $('motorMirror').disabled = !on; $('btnTruthRec').disabled = !on;
+  if (!on) { $('motorMirror').checked = false; S.penShake = false; }
+  else ser.setArm(meter.armMm);
 };
 $('btnConnect').addEventListener('click', async () => {
   try { if (ser.connected) await ser.disconnect(); else await ser.connect(); } catch (e) { slog('! ' + e.message); }
 });
 $('btnPing').addEventListener('click', () => ser.ping());
 $('imuGroup').addEventListener('change', (e) => { plot.group = e.target.value; });
+// Shake the real (v2 servo) pen with the tremor settings above. The fake (software) shake is switched off meanwhile,
+// so the line only shakes because the pen does. Re-sent every 5 s (the pen stops by itself without a refresh).
 function mirrorMotor() {
   if (!ser.connected) return;
-  if ($('motorMirror').checked && S.syn.on) ser.setTremor(S.syn.hz, Math.min(100, (S.syn.mm / 4) * 100)); else ser.stopTremor();
+  S.penShake = $('motorMirror').checked;
+  if (S.penShake) ser.shake(S.syn.hz, S.syn.mm, S.syn.preset !== 'sine'); else ser.stopShake();
 }
 $('motorMirror').addEventListener('change', mirrorMotor);
+setInterval(() => { if (ser.connected && S.penShake) mirrorMotor(); }, 5000);
+$('armMm').addEventListener('change', (e) => {
+  const v = +e.target.value; if (!(v >= 10 && v <= 120)) return;
+  meter.armMm = v; if (ser.connected) ser.setArm(v);
+});
+
+// Truth meter: what the pen was asked to do, what its sensor measured, and what Steady detected from the screen.
+function steadyReading() {
+  const f = S.filter, info = f.info();
+  if (!info || info.kind !== 'v2' || !f.fx.tremor_amp_mm) return { hz: NaN, mm: NaN };
+  return { hz: info.f0, mm: Math.hypot(f.fx.tremor_amp_mm(), f.fy.tremor_amp_mm()) };
+}
+const fmtHz = (v) => (Number.isFinite(v) ? `${v.toFixed(1)} Hz` : '-'), fmtMm = (v) => (Number.isFinite(v) ? `${v.toFixed(2)} mm` : '-');
+function updateTruth() {
+  if (!ser.connected) return;
+  const c = meter.commanded(), m = meter.measured(), st = steadyReading();
+  $('truthCmd').textContent = `${fmtHz(c.hz)}, ${fmtMm(c.mm)}`;
+  $('truthPen').textContent = `${fmtHz(m.hz)}, ${fmtMm(m.mm)}` + (m.axis ? ` (gyro ${m.axis})` : '');
+  $('truthSteady').textContent = `${fmtHz(st.hz)}, ${fmtMm(st.mm)}`;
+  return { c, m, st };
+}
+setInterval(updateTruth, 500);
+$('btnTruthRec').addEventListener('click', () => {
+  const r = updateTruth(); if (!r) return;
+  truthRows.push([new Date().toISOString(), S.syn.hz, S.syn.mm, S.syn.preset, meter.armMm, r.c.hz, r.c.mm, r.m.hz, r.m.mm, r.st.hz, r.st.mm, S.filterName]);
+  $('truthN').textContent = `${truthRows.length} row(s) recorded`; $('btnTruthCsv').disabled = false;
+});
+$('btnTruthCsv').addEventListener('click', () => {
+  const head = 'time,set_hz,set_mm,pattern,arm_mm,commanded_hz,commanded_mm,pen_sensor_hz,pen_sensor_mm,steady_hz,steady_mm,filter';
+  const fmt = (v) => (typeof v === 'number' ? (Number.isFinite(v) ? v.toFixed(3) : '') : v);
+  download('truth_meter.csv', [head, ...truthRows.map((r) => r.map(fmt).join(','))].join('\n') + '\n');
+});
 
 // ---------------------------------------------------------------- readouts
 function updateReadouts() {
@@ -383,3 +422,4 @@ function updateReadouts() {
 window.addEventListener('resize', resize);
 synPick('et_moderate'); resize(); requestAnimationFrame(updateReadouts);
 window.__steady = S; // handy for debugging in the console
+window.__steadyPen = { ser, meter, updateTruth }; // automated checks only

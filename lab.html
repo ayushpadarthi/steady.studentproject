@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Steady Lab</title>
-<link rel="stylesheet" href="css/style.css?v=11">
+<link rel="stylesheet" href="css/style.css?v=12">
 </head>
 <body>
 <header>
@@ -111,7 +111,17 @@
         <button id="btnConnect">Connect</button>
         <button id="btnPing" disabled>Ping</button>
       </div>
-      <label class="chk"><input type="checkbox" id="motorMirror" disabled> drive motor with synthetic tremor settings</label>
+      <label class="chk"><input type="checkbox" id="motorMirror" disabled> shake the real pen with the tremor settings above (the fake shake is switched off meanwhile)</label>
+      <label>Pen arm length (servo shaft to stylus tip, mm)
+        <input type="number" id="armMm" min="10" max="120" step="0.5" value="25"></label>
+      <div class="truth">
+        <p class="hint"><b>Truth meter</b> (calibrate mm first). Draw while the pen shakes.</p>
+        <p>Pen was asked for: <b id="truthCmd">-</b></p>
+        <p>Pen sensor measured: <b id="truthPen">-</b></p>
+        <p>Steady detected from the screen: <b id="truthSteady">-</b></p>
+        <div class="row"><button id="btnTruthRec" disabled>Record this row</button><button id="btnTruthCsv" disabled>Download CSV</button></div>
+        <p class="hint" id="truthN"></p>
+      </div>
       <label>Plot
         <select id="imuGroup"><option value="accel">accel (g)</option><option value="gyro">gyro (deg/s)</option></select></label>
       <canvas id="imuCanvas" width="300" height="90"></canvas>
@@ -123,6 +133,6 @@
     <canvas id="draw"></canvas>
   </section>
 </main>
-<script type="module" src="js/main.js?v=11"></script>
+<script type="module" src="js/main.js?v=12"></script>
 </body>
 </html>

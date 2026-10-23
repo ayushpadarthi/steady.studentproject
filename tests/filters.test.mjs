@@ -2,6 +2,7 @@
 // Also importable from a browser page: `import { runTests } from './tests/filters.test.mjs'`.
 import { settle, clampTo, clampMm } from '../js/settle.js';
 import { ShakeTracker } from '../js/shakestyle.js';
+import { PenMeter } from '../js/penmeter.js';
 import { RawFilter, EMAFilter, OneEuroFilter, SteadyFilter, SteadyV2, SteadyV3, SteadyV4, Filter2D, FILTER_NAMES, FREE_FILTER_NAMES, TremorTracker, fft, makeFilter } from '../js/filters.js';
 
 const results = [];
@@ -260,6 +261,19 @@ export async function runTests(loadFile = defaultLoader) {
       check('parity steady v4 (JS = Python) < 1e-9 incl. gate and y2', e < 1e-9 && eg < 1e-9 && ey < 1e-9 && nanMis === 0, `out ${e.toExponential(2)} g ${eg.toExponential(2)} y2 ${ey.toExponential(2)} nanMis ${nanMis}`);
     }
     check("makeFilter('steady') is SteadyV4", new Filter2D('steady').fx instanceof SteadyV4);
+  }
+  // --- truth meter (tremor pen): recovers frequency and tip size from gyro rocking and from commanded offsets
+  {
+    const pm = new PenMeter(30), f = 6, deg = 3, r = rng(3);   // 3 deg rocking on a 30 mm arm = 1.571 mm at the tip
+    for (let i = 0; i < 600; i++) {
+      const t = i / 200, w = deg * 2 * Math.PI * f * Math.cos(2 * Math.PI * f * t);   // deg/s = d/dt of deg*sin
+      pm.addSample({ t_us: t * 1e6, gx: 0.3 * (r() - 0.5), gy: w + 2 + 0.5 * (r() - 0.5), gz: 5 * Math.sin(t) });
+      if (i % 4 === 0) pm.addCommand({ t_us: t * 1e6, mm: 1.6 * Math.sin(2 * Math.PI * f * t) });
+    }
+    const m = pm.measured(), c = pm.commanded(), want = 30 * deg * Math.PI / 180;
+    check('truth meter: pen sensor gives 6 Hz and the right tip size', Math.abs(m.hz - 6) < 0.2 && Math.abs(m.mm - want) / want < 0.1 && m.axis === 'y',
+      `${m.hz.toFixed(2)} Hz ${m.mm.toFixed(3)} mm (want ${want.toFixed(3)}) axis ${m.axis}`);
+    check('truth meter: commanded 6 Hz, 1.6 mm', Math.abs(c.hz - 6) < 0.2 && Math.abs(c.mm - 1.6) < 0.1, `${c.hz.toFixed(2)} Hz ${c.mm.toFixed(3)} mm`);
   }
   {
     const f2 = new Filter2D('steady'); const now = (typeof performance !== 'undefined' ? performance : Date);
