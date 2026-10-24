@@ -4,8 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#1f6b4e">
 <title>Steady Lab</title>
-<link rel="stylesheet" href="css/style.css?v=13">
+<link rel="stylesheet" href="css/style.css?v=14">
 </head>
 <body>
 <header>
@@ -64,8 +67,8 @@
       <label>Millimetres per screen pixel
         <input type="number" id="mmPerPx" min="0.05" max="2" step="0.0001" value="0.2646"></label>
       <div class="row">
-        <button id="calReset">96 px/in</button>
-        <button id="calCard">Calibrate with card</button>
+        <button id="calReset">Standard guess</button>
+        <button id="calCard">Match a card</button>
       </div>
       <p class="hint" id="calHint">Default 0.2646 mm per pixel (96 px per inch). Calibrate so shapes on screen match real size; all mm numbers depend on it.</p>
     </section>
@@ -135,6 +138,7 @@
     <canvas id="draw"></canvas>
   </section>
 </main>
-<script type="module" src="js/main.js?v=13"></script>
+<script type="module" src="js/main.js?v=14"></script>
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
 </body>
 </html>

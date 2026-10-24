@@ -7,10 +7,11 @@
 //                 back-and-forth shake this is its peak size; slow intended movement is not counted.
 //   shake speed = Steady's detected tremor frequency (approximate; shown when conf >= 0.3 and size >= 0.15 mm).
 //   off spiral  = mean |radial distance| to the guide spiral (js/tasks.js), for the raw hand and for Steady's line.
-import { createPad, MM_PER_PX } from './pad.js?v=13';
-import { $, wireCommon, download, fitCanvas } from './pagekit.js?v=13';
-import { makeTemplate, spiralRadialErrors, errStats } from './tasks.js?v=13';
-import { settle } from './settle.js?v=13';
+import { createPad, MM_PER_PX } from './pad.js?v=14';
+import { $, wireCommon, download, fitCanvas } from './pagekit.js?v=14';
+import { makeTemplate, spiralRadialErrors, errStats } from './tasks.js?v=14';
+import { settle } from './settle.js?v=14';
+import { calibration, onCalibrationChange, openCalibration } from './calib.js?v=14';
 
 const KEY = 'steady.checkin.log';
 const guide = $('guide');
@@ -31,6 +32,8 @@ function drawGuide() {
   ctx.fillStyle = '#1f6b4e'; ctx.beginPath(); ctx.arc(cx + tpl.polyline[0][0] / MM_PER_PX, cy + tpl.polyline[0][1] / MM_PER_PX, 6, 0, 2 * Math.PI); ctx.fill();
 }
 window.addEventListener('resize', () => { drawGuide(); });
+// new real size: the spiral changes size on screen, so any drawing so far no longer matches it
+onCalibrationChange(() => { drawGuide(); restart(); });
 drawGuide();
 
 function status(msg) {
@@ -89,12 +92,14 @@ $('done').onclick = () => {
   $('rErrSteady').textContent = pad.steady ? fmt(m.errSteady, 2) : 'Steady was off';
   const warn = m.coverage < 0.75 ? `You traced about ${Math.round(m.coverage * 100)} % of the spiral. Trace all of it so check-ins compare fairly.` : '';
   $('rWarn').textContent = warn; $('rWarn').hidden = !warn;
+  $('rCal').hidden = calibration().calibrated;
   $('saveEntry').disabled = false; $('saveEntry').textContent = 'Save to my log';
   $('sheet').hidden = false; pad.enabled = false;
   status('Here is your result. Save it, or try again.');
 };
 function restart() { pad.clear(); result = null; $('sheet').hidden = true; pad.enabled = true; $('done').disabled = true; status(); }
 $('restart').onclick = restart; $('again').onclick = restart;
+$('calNow').onclick = () => openCalibration();
 
 // ---------------------------------------------------------------- log (localStorage, this device only)
 function readLog() { try { const a = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } }
@@ -104,7 +109,8 @@ $('saveEntry').onclick = () => {
   const log = readLog();
   log.push({ id: Date.now(), date: new Date().toISOString(), shake_mm: +result.shakeMm.toFixed(3), hz: result.hz ? +result.hz.toFixed(2) : null,
     err_raw_mm: +result.errRaw.toFixed(3), err_steady_mm: result.steady ? +result.errSteady.toFixed(3) : null,
-    dur_s: +result.dur.toFixed(2), coverage: +result.coverage.toFixed(2), demo: result.demo });
+    dur_s: +result.dur.toFixed(2), coverage: +result.coverage.toFixed(2), demo: result.demo,
+    mm_per_px: +calibration().mmPerPx.toFixed(5), real_size: calibration().calibrated });
   const ok = writeLog(log);
   $('saveEntry').textContent = ok ? 'Saved' : 'Could not save (storage blocked)'; $('saveEntry').disabled = true;
 };
@@ -118,7 +124,7 @@ function renderLog() {
     const d = new Date(e.date);
     const cells = [d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
       fmt(e.shake_mm, 2), e.hz ? `${e.hz.toFixed(1)} Hz` : '–', `${fmt(e.err_raw_mm, 2, '')} / ${fmt(e.err_steady_mm, 2, '')} mm`,
-      [e.demo ? `demo (${e.demo})` : '', e.coverage < 0.75 ? 'partial' : ''].filter(Boolean).join(', ')];
+      [e.demo ? `demo (${e.demo})` : '', e.coverage < 0.75 ? 'partial' : '', e.real_size === false ? 'size not set' : ''].filter(Boolean).join(', ')];
     cells.forEach((c, i) => { const td = document.createElement('td'); td.textContent = c; if (i && i < 4) td.className = 'num'; tr.appendChild(td); });
     const td = document.createElement('td'), b = document.createElement('button');
     b.className = 'del'; b.textContent = 'Delete'; b.setAttribute('aria-label', `Delete check-in from ${cells[0]}`);
@@ -161,7 +167,7 @@ $('logBtn').onclick = () => { ui.close(); $('logPanel').hidden = false; renderLo
 $('logClose').onclick = () => { $('logPanel').hidden = true; $('logBtn').focus(); };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('logPanel').hidden) $('logClose').click(); });
 $('exportCsv').onclick = () => {
-  const cols = ['date', 'shake_mm', 'hz', 'err_raw_mm', 'err_steady_mm', 'dur_s', 'coverage', 'demo'];
+  const cols = ['date', 'shake_mm', 'hz', 'err_raw_mm', 'err_steady_mm', 'dur_s', 'coverage', 'demo', 'mm_per_px', 'real_size'];
   download('steady-checkins', [cols.join(',')].concat(readLog().map((e) => cols.map((c) => e[c] ?? '').join(','))).join('\n') + '\n');
 };
 

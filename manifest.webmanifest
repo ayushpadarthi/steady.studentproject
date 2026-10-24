@@ -1,0 +1,14 @@
+{
+  "name": "Steady",
+  "short_name": "Steady",
+  "description": "A drawing tool that removes hand tremor from your lines as you draw, without making them lag.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1f6b4e",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

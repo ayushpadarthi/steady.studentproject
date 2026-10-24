@@ -1,11 +1,12 @@
 // Steady app: drawing canvas, live filters, synthetic tremor, study mode, optional serial.
-import { Filter2D, TremorTracker } from './filters.js?v=13';
-import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=13';
-import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=13';
-import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=13';
-import { PenMeter } from './penmeter.js?v=13';
-import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=13';
-import { openCompare } from './compare.js?v=13';
+import { Filter2D, TremorTracker } from './filters.js?v=14';
+import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=14';
+import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=14';
+import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=14';
+import { PenMeter } from './penmeter.js?v=14';
+import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=14';
+import { openCompare } from './compare.js?v=14';
+import { MM_PER_PX, calibration, setMmPerPx, onCalibrationChange, openCalibration } from './calib.js?v=14';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('draw'), ctx = canvas.getContext('2d');
@@ -13,7 +14,7 @@ const INK = '#14213d', GREY = '#a3a8ad';
 
 // ---------------------------------------------------------------- state
 const S = {
-  mode: 'free', mmPerPx: 0.2646, w: 0, h: 0,
+  mode: 'free', mmPerPx: MM_PER_PX, w: 0, h: 0, // mm per CSS px: the device's saved real size (js/calib.js)
   filter: new Filter2D('steady'), filterName: 'steady', monitor: false, penShake: false,
   mon: new TremorTracker(),
   strokes: [], cur: null, drawing: false, lastT: -Infinity,
@@ -21,7 +22,7 @@ const S = {
   gen: makeTremor('et_moderate', {}, 20240607), speed: new SpeedEstimator(0.08), // one generator, continuous in time (never restarted per stroke)
   rec: [], recCur: null,
   lag: { ms: 0, ok: false, hist: [] }, fs: 0,
-  guide: 'none', template: null, trial: null, study: null, showCal: false,
+  guide: 'none', template: null, trial: null, study: null,
 };
 
 // ---------------------------------------------------------------- geometry
@@ -61,10 +62,6 @@ function redraw() {
     const cx = S.w / 2, cy = S.h / 2;
     const pts = S.template.polyline.map(([x, y]) => [cx + x / S.mmPerPx, cy + y / S.mmPerPx]);
     polyline(pts, 'rgba(60,110,200,0.22)', 3);
-  }
-  if (S.showCal) {
-    ctx.fillStyle = '#d97706'; ctx.fillRect(S.w / 2 - 100, S.h / 2 - 3, 200, 6);
-    ctx.fillStyle = INK; ctx.fillText('200 px bar', S.w / 2 - 30, S.h / 2 - 10);
   }
   if (showRaw()) for (const s of S.strokes) polyline(s.raw, GREY, 1.5);
   for (const s of S.strokes) polyline(s.fil, INK, 2.2);
@@ -202,23 +199,21 @@ $('synMm').addEventListener('input', (e) => { const v = clampN(+e.target.value, 
 $('synOn').addEventListener('input', () => { synUi(); mirrorMotor(); });
 const synLabel = () => (!S.syn.on ? 'none' : S.syn.custom ? `custom(based_on=${S.syn.preset})` : S.syn.preset);
 
-// calibration
-function setCal(v) {
-  if (!(v > 0.01 && v < 5)) return;
-  S.mmPerPx = v; $('mmPerPx').value = v.toFixed(4);
+// calibration: one saved value per device, shared with every page (js/calib.js)
+function applyCal() {
+  const c = calibration();
+  S.mmPerPx = c.mmPerPx; $('mmPerPx').value = c.mmPerPx.toFixed(4);
+  $('calHint').textContent = c.calibrated
+    ? `Real size set on this device (${c.how === 'card' ? 'matched to a card' : 'typed in'}, ${new Date(c.date).toLocaleDateString()}). Every page uses it.`
+    : 'Not set: using the standard guess of 0.2646 mm per pixel (96 px per inch). On a tablet or phone this is wrong; match a card so all mm numbers are real.';
+  S.filter.reset(); S.mon.reset(); // the filter's millimetres changed meaning
   updateTemplate(); redraw();
 }
-$('mmPerPx').addEventListener('change', (e) => setCal(+e.target.value));
-$('calReset').addEventListener('click', () => setCal(25.4 / 96));
-$('calCard').addEventListener('click', () => {
-  S.showCal = true; redraw();
-  setTimeout(() => {
-    const v = window.prompt('Measure the orange bar on screen with a ruler. Length in mm?', '');
-    S.showCal = false;
-    if (v) setCal(parseFloat(v) / 200);
-    redraw();
-  }, 50);
-});
+$('mmPerPx').addEventListener('change', (e) => { if (!setMmPerPx(+e.target.value, 'manual')) applyCal(); });
+$('calReset').addEventListener('click', () => setMmPerPx(null));
+$('calCard').addEventListener('click', () => openCalibration());
+onCalibrationChange(applyCal);
+applyCal();
 
 // ---------------------------------------------------------------- study mode
 const ST = () => S.study;

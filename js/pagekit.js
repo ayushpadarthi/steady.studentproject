@@ -1,5 +1,7 @@
 // UI shared by the check-in and tracing pages: Steady switch, Demo popover (simulated tremor presets, raw line),
-// popover open/close. Element ids follow draw.html (steady, steadyState, demoBtn, demoPop, synOn, presetList, ghostOn).
+// popover open/close, real-size calibration. Element ids follow draw.html (steady, steadyState, demoBtn, demoPop, synOn, presetList, ghostOn).
+import { openCalibration, calibrationLabel, onCalibrationChange } from './calib.js?v=14';
+
 export const $ = (id) => document.getElementById(id);
 export const DEMO_PRESETS = [
   ['healthy', 'Healthy', 'Normal tiny shake, about 0.1 mm'],
@@ -24,6 +26,13 @@ export function wireCommon(pad, { onChange = () => {}, pops = { demoBtn: 'demoPo
     b.addEventListener('click', () => { pad.setPreset(k); sync(); });
     $('presetList').appendChild(b);
   }
+  // real size (js/calib.js): a button at the end of the Demo panel, with the current state in words
+  const calBtn = document.createElement('button'), calNote = document.createElement('p');
+  calBtn.className = 'row-btn'; calBtn.id = 'calBtn'; calBtn.innerHTML = '<span>Set real size (match a card)</span>';
+  calNote.className = 'pop-note'; calNote.id = 'calNote';
+  const calSync = () => { calNote.textContent = calibrationLabel(); };
+  calBtn.onclick = () => { close(); openCalibration(); };
+  $('demoPop').append(calBtn, calNote); calSync(); onCalibrationChange(calSync);
   $('synOn').onclick = () => { pad.syn.on = !pad.syn.on; sync(); };
   $('ghostOn').onclick = () => { pad.ghost = !pad.ghost; sync(); };
   $('steady').onclick = () => { pad.steady = !pad.steady; sync(); };

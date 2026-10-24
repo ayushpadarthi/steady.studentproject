@@ -4,9 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#1f6b4e">
 <title>Spiral check-in</title>
-<link rel="stylesheet" href="css/draw.css?v=13">
-<link rel="stylesheet" href="css/pages.css?v=13">
+<link rel="stylesheet" href="css/draw.css?v=14">
+<link rel="stylesheet" href="css/pages.css?v=14">
 </head>
 <body class="page">
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -48,6 +51,8 @@
     <div><dt>Off the spiral, with Steady</dt><dd id="rErrSteady">–</dd></div>
   </dl>
   <p id="rWarn" class="warn" hidden></p>
+  <p id="rCal" class="fine" hidden>Real size is not set on this device, so millimetres assume a standard laptop screen.
+    <button id="calNow" class="link-btn">Set real size</button></p>
   <div class="row">
     <button id="saveEntry" class="text primary">Save to my log</button>
     <button id="again" class="text">Try again</button>
@@ -58,7 +63,7 @@
 <section id="logPanel" class="panel" aria-label="Check-in log" hidden>
   <div class="panel-in">
     <div class="panel-head"><h2>Your check-ins</h2><button id="logClose" class="text">Close</button></div>
-    <p class="fine">Shake size over time (mm). Saved only on this device. Entries made with simulated tremor are marked "demo".</p>
+    <p class="fine">Shake size over time (mm). Saved only on this device. Entries made with simulated tremor are marked "demo"; entries made before the real size was set are marked "size not set".</p>
     <canvas id="chart" class="chart" aria-label="Chart of shake size over time"></canvas>
     <div class="tablewrap"><table class="log"><thead><tr><th>Date</th><th>Shake</th><th>Speed</th><th>Off spiral (hand / Steady)</th><th>Note</th><th></th></tr></thead>
       <tbody id="logBody"></tbody></table></div>
@@ -75,6 +80,7 @@
   <button id="ghostOn" class="row-switch" role="switch" aria-checked="false"><span>Show the raw, shaky line</span><span class="mini"><span class="knob"></span></span></button>
 </div>
 
-<script type="module" src="js/checkin.js?v=13"></script>
+<script type="module" src="js/checkin.js?v=14"></script>
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
 </body>
 </html>

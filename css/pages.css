@@ -67,3 +67,4 @@ button.icon.primary:disabled { background: var(--steady); opacity: .35; }
 }
 /* These pages have room in the dock, so the Steady switch keeps its word even on small phones. */
 @media (max-width: 400px) { body.page button.steady .lbl { display: inline; } body.page button.steady { padding: 0 14px 0 10px; } }
+.link-btn { font: inherit; color: var(--ink); background: none; border: 0; padding: 0; min-height: 0; text-decoration: underline; cursor: pointer; }

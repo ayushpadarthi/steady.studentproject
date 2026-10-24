@@ -1,7 +1,9 @@
 # Steady web app
 
 Static, dependency-free web app (plain HTML + JavaScript modules). No build step, no network calls: nothing the
-user draws leaves the browser (preferences and the check-in log stay in `localStorage` on the device).
+user draws leaves the browser. Preferences, the real-size calibration and the check-in log stay in `localStorage`; the
+current drawing is kept in IndexedDB so a refresh does not lose it. Works offline once opened (service worker) and
+can be installed to the home screen.
 Live: https://ayushpadarthi.github.io/steady.studentproject/
 
 ## Pages
@@ -16,8 +18,8 @@ Live: https://ayushpadarthi.github.io/steady.studentproject/
 All pages use the **same** `js/filters.js`, so study results apply to the drawing app.
 
 ### Drawing app
-- **Basics:** Steady on/off switch, brush and eraser, 10 colours, 4 sizes, pen pressure, undo/redo, two-tap clear,
-  save PNG, palm rejection once a pen is used.
+- **Basics:** Steady on/off switch, brush and eraser (also the stylus's eraser end), 10 colours, 4 sizes, pen
+  pressure, undo/redo, two-tap clear, save PNG, palm rejection once a pen is used, drawing kept on the device.
 - **Shortcuts:** Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z, Cmd/Ctrl+S, B, E, S, M (smoothing), K (shake style), R (replay), [ ].
 - **Line menu:**
   - Smoothing: Off / Smooth / Extra. Each finished stroke settles after pen-up, scaled by the detected tremor and
@@ -29,6 +31,7 @@ All pages use the **same** `js/filters.js`, so study results apply to the drawin
   - a "Your shake" card;
   - slow-motion replay;
   - a before/after picture;
+  - "Set real size (match a card)";
   - links to the other pages.
 
 ### Design rules (keep them)
@@ -59,9 +62,15 @@ Serve `software/` (so `../../shared/test_vectors` is reachable), open any page, 
 
 With `node` installed: `node software/app/tests/filters.test.mjs`.
 
+## Real size
+Steady's settings and every score are in millimetres, but a CSS pixel is ~0.26 mm on a laptop, ~0.19 mm on an iPad
+and ~0.16 mm on a phone. `js/calib.js` holds one saved value per device ("Set real size": match a bank/ID card on
+screen), used live by every page; without it the standard 96 px/in guess is used and the check-in says so.
+
 ## Releases
 Pages load files as `?v=N` so browsers never mix old and new code (GitHub Pages caches for 10 minutes). **Bump N in
-every `.html` and every `import` line when publishing** (currently 13).
+every `.html` and every `import` line, and `VERSION` in `sw.js`, when publishing** (currently 14). If you add a file,
+add it to the list in `sw.js` too.
 
 ## Filters (`js/filters.js`)
 | Name | What |
@@ -79,6 +88,9 @@ changes, a new study session starts, or a new study condition starts.
 ## Other files
 | File | What |
 |---|---|
+| `js/calib.js` | Real-size calibration (mm per CSS px) shared by all pages, and the "match a card" dialog |
+| `js/store.js` | Keeps the current drawing on the device (IndexedDB) |
+| `sw.js`, `manifest.webmanifest`, `icons/` | Offline copy (network first, stored copy after 3 s or with no network) and home-screen install |
 | `js/settle.js` | After-pen-up settling: zero-phase low-pass, adaptive strength (thresholds 0.2/0.4 mm for v4), shake-size limit |
 | `js/tremor.js` | Realistic simulated tremor (port of `software/core/steady/tremor_models.py`) |
 | `js/compare.js` | Compare overlay: "While drawing" vs "Final line", with wiggle, lag, and distance off the intended line (when tremor is simulated) |
@@ -108,5 +120,5 @@ The CSV has `# ...` metadata lines, then these columns:
 
 Protocol: `docs/04-architecture-spec.md`. Hardware: `hardware/README.md`.
 
-`window.__steadyDraw`, `window.__steady`, `window.__steadyPen`, `window.__steadyCheckin`, `window.__steadyTrace` and
+`window.__steadyDraw` (with `redrawInk`/`redrawAll`), `window.__steady`, `window.__steadyPen`, `window.__steadyCheckin`, `window.__steadyTrace` and
 the `__testT` event property exist only for automated checks.

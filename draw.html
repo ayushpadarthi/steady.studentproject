@@ -4,8 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#1f6b4e">
 <title>Steady</title>
-<link rel="stylesheet" href="css/draw.css?v=13">
+<link rel="stylesheet" href="css/draw.css?v=14">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -78,11 +81,14 @@
   <button id="shakeOn" class="row-switch" role="switch" aria-checked="false"><span>Show "Your shake" card</span><span class="mini"><span class="knob"></span></span></button>
   <button id="replayBtn" class="row-btn" title="Watch your last stroke again, slowed down (R)"><svg><use href="#i-redo"/></svg><span>Replay last stroke in slow motion</span></button>
   <button id="saveBA" class="row-btn" title="One picture: your raw input on the left, the Steady line on the right"><svg><use href="#i-save"/></svg><span>Save before/after picture</span></button>
+  <button id="calBtn" class="row-btn" title="Match a card so millimetres are real on this screen"><span>Set real size (match a card)</span></button>
+  <p id="calNote" class="pop-note"></p>
   <p class="pop-foot">More: <a href="trace.html">Trace and colour</a> · <a href="checkin.html">Spiral check-in</a> · <a href="lab.html">Lab</a></p>
 </div>
 
 <div id="flash" class="flash" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="js/draw.js?v=13"></script>
+<script type="module" src="js/draw.js?v=14"></script>
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
 </body>
 </html>

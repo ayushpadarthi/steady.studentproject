@@ -1,12 +1,14 @@
 // Steady drawing app. Uses the SAME filter code as the lab (js/filters.js), so study results apply to it.
-import { Filter2D } from './filters.js?v=13';
-import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=13';
-import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=13';
-import { openReplay } from './replay.js?v=13';
-import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=13';
+import { Filter2D } from './filters.js?v=14';
+import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=14';
+import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=14';
+import { openReplay } from './replay.js?v=14';
+import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=14';
+// MM_PER_PX: the device's real size (js/calib.js); the filter's parameters are in millimetres
+import { MM_PER_PX, onCalibrationChange, openCalibration, calibrationLabel } from './calib.js?v=14';
+import { saveDrawing, loadDrawing } from './store.js?v=14';
 
 const $ = (id) => document.getElementById(id);
-const MM_PER_PX = 0.2646; // same default as the lab (96 px/in); the filter's parameters are in millimetres
 
 const COLORS = [
   ['Ink', '#1b1b1f'], ['Graphite', '#6b6b70'], ['Ultramarine', '#2b4cc4'], ['Cerulean', '#2f8fce'], ['Viridian', '#1f7a5a'],
@@ -39,6 +41,7 @@ const S = {
   strokes: [], history: [], redo: [],   // history items: {kind:'stroke', stroke} | {kind:'clear', removed:[...]}
   cur: null, pointerId: null, sawPen: false, lastT: -Infinity,
   w: 0, h: 0, dpr: 1,
+  baseN: 0,                             // strokes[0..baseN) are already painted on the base layer (see redrawInk)
 };
 load();
 // One persistent Steady filter for the whole drawing session: it keeps learning the tremor between strokes.
@@ -53,10 +56,13 @@ const tremorGen = makeTremor(S.syn.preset, {}, (Date.now() ^ Math.floor(Math.ran
 // ---------------------------------------------------------------- canvases
 const ink = $('ink'), ghost = $('ghost');
 const ictx = ink.getContext('2d'), gctx = ghost.getContext('2d');
+// Off-screen base layer holding every finished, settled stroke. A settling animation frame then costs one
+// image copy plus the strokes still moving, instead of redrawing the whole picture (about 50 ms at 300 strokes).
+const base = document.createElement('canvas'), bctx = base.getContext('2d');
 function resize() {
   S.dpr = Math.min(window.devicePixelRatio || 1, 3);
   S.w = window.innerWidth; S.h = window.innerHeight;
-  for (const c of [ink, ghost]) {
+  for (const c of [ink, ghost, base]) {
     c.width = Math.round(S.w * S.dpr); c.height = Math.round(S.h * S.dpr);
     c.getContext('2d').setTransform(S.dpr, 0, 0, S.dpr, 0, 0);
   }
@@ -115,22 +121,40 @@ function drawStrokeTail(ctx, s, pts, i, ghostLine) {
   const w = ghostLine ? 1.25 : (pts[i - 1].w + pts[i].w) / 2;
   segment(ctx, i >= 2 ? pts[i - 2] : null, pts[i - 1], pts[i], color, w, erase);
 }
-function drawStroke(s) {
-  for (let i = 0; i < s.pts.length; i++) drawStrokeTail(ictx, s, s.pts, i, false);
+function drawInk(ctx, s) { for (let i = 0; i < s.pts.length; i++) drawStrokeTail(ctx, s, s.pts, i, false); }
+function drawGhost(s) {
   if (s.tool === 'brush') for (let i = 0; i < s.raw.length; i++) drawStrokeTail(gctx, s, s.raw, i, true);
   else for (let i = 0; i < s.pts.length; i++) drawStrokeTail(gctx, s, s.pts, i, false); // eraser clears the raw line too
 }
-function redrawAll() {
-  ictx.save(); ictx.setTransform(1, 0, 0, 1, 0, 0); ictx.clearRect(0, 0, ink.width, ink.height); ictx.restore();
-  gctx.save(); gctx.setTransform(1, 0, 0, 1, 0, 0); gctx.clearRect(0, 0, ghost.width, ghost.height); gctx.restore();
-  for (const s of S.strokes) drawStroke(s);
+function wipe(c) { const x = c.getContext('2d'); x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, c.width, c.height); x.restore(); }
+// Paint finished strokes onto the base layer, in order, up to the first one still settling or being drawn.
+function bake() {
+  while (S.baseN < S.strokes.length) {
+    const s = S.strokes[S.baseN];
+    if (s === S.cur || s.settling) break;
+    drawInk(bctx, s); S.baseN++;
+  }
+  bctx.globalCompositeOperation = 'source-over';
+}
+// Ink canvas = base layer + the strokes after it (settling, or the one being drawn).
+function redrawInk() {
+  bake(); wipe(ink);
+  ictx.save(); ictx.setTransform(1, 0, 0, 1, 0, 0); ictx.globalCompositeOperation = 'source-over'; ictx.drawImage(base, 0, 0); ictx.restore();
+  for (let i = S.baseN; i < S.strokes.length; i++) drawInk(ictx, S.strokes[i]);
   ictx.globalCompositeOperation = 'source-over';
+}
+// Full rebuild (undo, clear, resize, restore): the base layer and the raw line from scratch.
+function redrawAll() {
+  wipe(base); wipe(ghost); S.baseN = 0;
+  for (const s of S.strokes) drawGhost(s);
+  gctx.globalCompositeOperation = 'source-over';
+  redrawInk();
   ghost.style.visibility = S.ghost ? 'visible' : 'hidden';
 }
 
 // ---------------------------------------------------------------- input
-function widthFor(ev) {
-  const base = S.tool === 'eraser' ? S.size * 3 : S.size;
+function widthFor(ev, tool) {
+  const base = tool === 'eraser' ? S.size * 3 : S.size;
   if (ev.pointerType !== 'pen' || !(ev.pressure > 0)) return base;
   return base * (0.35 + 0.95 * Math.min(1, ev.pressure));
 }
@@ -154,7 +178,7 @@ function ingest(ev) {
   }
   const useF = S.steady && Number.isFinite(fx) && Number.isFinite(fy);
   const s = S.cur;
-  const wRaw = widthFor(ev);
+  const wRaw = widthFor(ev, s.tool);
   s.wSm = s.wSm == null ? wRaw : s.wSm * 0.7 + wRaw * 0.3; // soften pressure jitter
   s.t.push(t);
   s.live.push({ x: (useF ? fx : xm) / MM_PER_PX, y: (useF ? fy : ym) / MM_PER_PX, w: s.wSm });
@@ -179,7 +203,9 @@ ink.addEventListener('pointerdown', (e) => {
   speedEst.reset();
   steadyF.startStroke();                                   // keeps the learned tremor, restarts the line
   shakeT.startStroke();
-  S.cur = { tool: S.tool, color: S.color, steady: S.steady, style: S.tool === 'brush' && S.steady ? S.style : 'none',
+  // the eraser end of a stylus (or its eraser button) erases, whatever tool is selected
+  const tool = e.pointerType === 'pen' && (e.button === 5 || (e.buttons & 32)) ? 'eraser' : S.tool;
+  S.cur = { tool, color: S.color, steady: S.steady, style: tool === 'brush' && S.steady ? S.style : 'none',
     pts: [], raw: [], live: [], t: [], env: [], mark: [], dsh: [], wSm: null };
   S.strokes.push(S.cur);
   S.lastT = -Infinity;
@@ -198,7 +224,7 @@ function endStroke(e) {
   const s = S.cur; S.cur = null;
   if (s && s.pts.length) { S.history.push({ kind: 'stroke', stroke: s }); S.redo = []; settleStroke(s); }
   else if (s) S.strokes.pop();
-  syncButtons();
+  bake(); syncButtons(); saveSoon();
 }
 
 // ---------------------------------------------------------------- ink settling
@@ -213,14 +239,15 @@ function settleStroke(s) {
   s.settle = prm;
   const t0 = performance.now();
   const frame = (now) => {
-    if (!S.strokes.includes(s)) { s.pts = to; return; } // undone mid-animation: redo shows the settled line
+    if (!S.strokes.includes(s)) { s.pts = to; s.settling = false; return; } // undone mid-animation: redo shows the settled line
     const u = Math.min(1, (now - t0) / SETTLE_MS), e = 1 - (1 - u) ** 3;
-    s.pts = from.map((p, i) => ({ ...p, x: p.x + (to[i].x - p.x) * e, y: p.y + (to[i].y - p.y) * e }));
-    redrawAll();
-    if (u < 1) requestAnimationFrame(frame); else s.pts = to;
+    s.pts = u < 1 ? from.map((p, i) => ({ ...p, x: p.x + (to[i].x - p.x) * e, y: p.y + (to[i].y - p.y) * e })) : to;
+    if (u >= 1) s.settling = false;
+    redrawInk();
+    if (u < 1) requestAnimationFrame(frame); else saveSoon();
   };
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { s.pts = to; redrawAll(); }
-  else requestAnimationFrame(frame);
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { s.pts = to; redrawInk(); }
+  else { s.settling = true; requestAnimationFrame(frame); }
 }
 ink.addEventListener('pointerup', endStroke);
 ink.addEventListener('pointercancel', endStroke);
@@ -231,13 +258,13 @@ function undo() {
   const a = S.history.pop(); if (!a) return;
   if (a.kind === 'stroke') S.strokes.splice(S.strokes.lastIndexOf(a.stroke), 1);
   else S.strokes = a.removed.concat(S.strokes);
-  S.redo.push(a); redrawAll(); syncButtons();
+  S.redo.push(a); redrawAll(); syncButtons(); saveSoon();
 }
 function redo() {
   const a = S.redo.pop(); if (!a) return;
   if (a.kind === 'stroke') S.strokes.push(a.stroke);
   else { a.removed = S.strokes; S.strokes = []; }
-  S.history.push(a); redrawAll(); syncButtons();
+  S.history.push(a); redrawAll(); syncButtons(); saveSoon();
 }
 let clearTimer = null;
 function clearPage() {
@@ -250,7 +277,7 @@ function clearPage() {
   disarmClear();
   if (!S.strokes.length) return;
   S.history.push({ kind: 'clear', removed: S.strokes }); S.strokes = []; S.redo = [];
-  redrawAll(); syncButtons();
+  redrawAll(); syncButtons(); saveSoon();
 }
 function disarmClear() { clearTimeout(clearTimer); $('clear').classList.remove('armed'); $('clearLbl').textContent = 'Clear'; }
 
@@ -401,6 +428,11 @@ $('synOn').onclick = () => { S.syn.on = !S.syn.on; syncButtons(); };
 $('ghostOn').onclick = () => { S.ghost = !S.ghost; syncButtons(); };
 $('shakeOn').onclick = () => { S.shakeCard = !S.shakeCard; syncButtons(); updateShakeCard(); };
 $('saveBA').onclick = saveBeforeAfter;
+$('calBtn').onclick = () => { closePops(); openCalibration(); };
+const calSync = () => { $('calNote').textContent = calibrationLabel(); };
+// new real size: the filter's millimetres changed meaning, so it relearns the tremor
+onCalibrationChange(() => { steadyF.reset(); shakeT.startStroke(); calSync(); updateStatus(); flash('Real size updated'); });
+calSync();
 $('steady').onclick = () => setSteady(!S.steady);
 $('toolBrush').onclick = () => setTool('brush');
 $('toolEraser').onclick = () => setTool('eraser');
@@ -468,7 +500,28 @@ function updateShakeCard() {
 }
 setInterval(() => { if (!document.hidden) updateShakeCard(); }, 100);
 
-// ---------------------------------------------------------------- preferences (per device; drawing itself is not stored)
+// ---------------------------------------------------------------- the drawing itself (this device only, js/store.js)
+// Saved a moment after every change and when the page is hidden, so a refresh or an accidental back-swipe
+// never loses it. Undo history is rebuilt stroke by stroke on restore.
+let saveTimer = null;
+function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 600); }
+function saveNow() {
+  clearTimeout(saveTimer); saveTimer = null;
+  const strokes = S.strokes.filter((s) => s !== S.cur).map(({ settling, wSm, ...rest }) => rest);
+  saveDrawing({ v: 1, saved: Date.now(), w: S.w, h: S.h, strokes });
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden && saveTimer) saveNow(); });
+window.addEventListener('pagehide', () => { if (saveTimer) saveNow(); });
+function restoreDrawing() {
+  loadDrawing().then((d) => {
+    if (!d || !Array.isArray(d.strokes) || !d.strokes.length || S.strokes.length || S.pointerId !== null) return;
+    const ok = d.strokes.filter((s) => s && Array.isArray(s.pts) && s.pts.length && Array.isArray(s.raw));
+    S.strokes = ok; S.history = ok.map((stroke) => ({ kind: 'stroke', stroke })); S.redo = [];
+    redrawAll(); syncButtons(); flash('Your last drawing is back');
+  });
+}
+
+// ---------------------------------------------------------------- preferences (per device)
 function persist() {
   try { localStorage.setItem('steady.draw.prefs', JSON.stringify({ steady: S.steady, color: S.color, size: S.size, syn: { preset: S.syn.preset }, ghost: S.ghost, smooth: S.smooth, style: S.style, shakeCard: S.shakeCard })); } catch {}
 }
@@ -488,6 +541,6 @@ function load() {
   } catch {}
 }
 
-resize(); syncButtons(); updateStatus();
+resize(); syncButtons(); updateStatus(); restoreDrawing();
 // test hook for automated checks (no effect on normal use)
-window.__steadyDraw = { S, steadyF, tremorGen, shakeT };
+window.__steadyDraw = { S, steadyF, tremorGen, shakeT, redrawInk, redrawAll };
