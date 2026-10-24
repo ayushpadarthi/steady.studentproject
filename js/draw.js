@@ -1,12 +1,12 @@
 // Steady drawing app. Uses the SAME filter code as the lab (js/filters.js), so study results apply to it.
-import { Filter2D } from './filters.js?v=15';
-import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=15';
-import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=15';
-import { openReplay } from './replay.js?v=15';
-import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=15';
+import { Filter2D } from './filters.js?v=16';
+import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=16';
+import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=16';
+import { openReplay } from './replay.js?v=16';
+import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=16';
 // MM_PER_PX: the device's real size (js/calib.js); the filter's parameters are in millimetres
-import { MM_PER_PX, onCalibrationChange, openCalibration, calibrationLabel } from './calib.js?v=15';
-import { saveDrawing, loadDrawing } from './store.js?v=15';
+import { MM_PER_PX, onCalibrationChange, openCalibration, calibrationLabel } from './calib.js?v=16';
+import { saveDrawing, loadDrawing } from './store.js?v=16';
 
 const $ = (id) => document.getElementById(id);
 
@@ -139,7 +139,9 @@ function bake() {
 // Ink canvas = base layer + the strokes after it (settling, or the one being drawn).
 function redrawInk() {
   bake(); wipe(ink);
-  ictx.save(); ictx.setTransform(1, 0, 0, 1, 0, 0); ictx.globalCompositeOperation = 'source-over'; ictx.drawImage(base, 0, 0); ictx.restore();
+  if (base.width && base.height) { // a hidden tab can load with a 0 x 0 window
+    ictx.save(); ictx.setTransform(1, 0, 0, 1, 0, 0); ictx.globalCompositeOperation = 'source-over'; ictx.drawImage(base, 0, 0); ictx.restore();
+  }
   for (let i = S.baseN; i < S.strokes.length; i++) drawInk(ictx, S.strokes[i]);
   ictx.globalCompositeOperation = 'source-over';
 }
