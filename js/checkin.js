@@ -7,11 +7,11 @@
 //                 back-and-forth shake this is its peak size; slow intended movement is not counted.
 //   shake speed = Steady's detected tremor frequency (approximate; shown when conf >= 0.3 and size >= 0.15 mm).
 //   off spiral  = mean |radial distance| to the guide spiral (js/tasks.js), for the raw hand and for Steady's line.
-import { createPad, MM_PER_PX } from './pad.js?v=14';
-import { $, wireCommon, download, fitCanvas } from './pagekit.js?v=14';
-import { makeTemplate, spiralRadialErrors, errStats } from './tasks.js?v=14';
-import { settle } from './settle.js?v=14';
-import { calibration, onCalibrationChange, openCalibration } from './calib.js?v=14';
+import { createPad, MM_PER_PX } from './pad.js?v=15';
+import { $, wireCommon, download, fitCanvas } from './pagekit.js?v=15';
+import { makeTemplate, spiralRadialErrors, errStats } from './tasks.js?v=15';
+import { settle } from './settle.js?v=15';
+import { calibration, onCalibrationChange, openCalibration } from './calib.js?v=15';
 
 const KEY = 'steady.checkin.log';
 const guide = $('guide');

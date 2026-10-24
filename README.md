@@ -52,9 +52,10 @@ works in any modern browser, including Safari on iPad.
 
 ## Tests
 Serve `software/` (so `../../shared/test_vectors` is reachable), open any page, then in the console:
-`(await import('/app/tests/filters.test.mjs')).runTests()`. That runs 45 checks:
+`(await import('/app/tests/filters.test.mjs')).runTests()`. That runs 47 checks:
 - every filter, plus stroke semantics;
-- parity with the Python reference vectors, v1-v4 (output, gate and zero-lag estimate to about 1e-12);
+- parity with the Python reference vectors, v1-v5 (output, gate, drawing check and zero-lag estimate to about 1e-12);
+- the drawing check keeping a deliberate 3 Hz zigzag;
 - settling and the shake-size limit;
 - the shake-style tracker;
 - the truth meter;
@@ -69,14 +70,15 @@ screen), used live by every page; without it the standard 96 px/in guess is used
 
 ## Releases
 Pages load files as `?v=N` so browsers never mix old and new code (GitHub Pages caches for 10 minutes). **Bump N in
-every `.html` and every `import` line, and `VERSION` in `sw.js`, when publishing** (currently 14). If you add a file,
+every `.html` and every `import` line, and `VERSION` in `sw.js`, when publishing** (currently 15). If you add a file,
 add it to the list in `sw.js` too.
 
 ## Filters (`js/filters.js`)
 | Name | What |
 |---|---|
 | `raw`, `ema` (2 Hz), `one_euro` (1.0 / 0.007 / 1.0) | Baselines |
-| `steady` = **SteadyV4** | SteadyV3 algorithm with `V4_PARAMS` (retuned on realistic tremor). Parity: `shared/test_vectors/steady_v4_kalman.json` |
+| `steady` = **SteadyV5** | v4 + the drawing check: a slow (< ~4 Hz), big (> ~1 mm) rhythm is treated as deliberate drawing, not tremor, so zigzags and waves are kept. Parity: `shared/test_vectors/steady_v5_kalman.json` |
+| `steady_v4` | SteadyV3 algorithm with `V4_PARAMS` (retuned on realistic tremor), no drawing check. Parity: `steady_v4_kalman.json` |
 | `steady_v3` | Gated SteadyV2 (0.1→0.3 mm detected tremor) + 10 Hz finish; exposes `y2`, the zero-lag estimate used by shake style |
 | `steady_v2` | Mix of 4 Kalman filters, each with 19 oscillators at 3-12 Hz |
 | `steady_v1` | Original filter with an FFT frequency tracker (free play only) |

@@ -65,12 +65,17 @@ export function adaptiveParams(f2d, k = K) {
   const amp = amps[i], hz = (i ? f2d.fy : f2d.fx).tremor_hz();
   const w = Number.isFinite(amp) ? Math.min(1, Math.max(0, (amp - LO) / (HI - LO))) : 0;
   const fc = Number.isFinite(hz) ? Math.min(6, Math.max(2, k * hz)) : BASE_FC;
-  return { fc, w };
+  // v5 drawing check: a slow, big rhythm is the drawing itself, so settle it less (same as eval_settle.adaptive_fc)
+  const it = f2d.fx.intent ? Math.max(f2d.fx.intent(), f2d.fy.intent()) : 0;
+  return { fc, w: w * (1 - it), it };
 }
 
 /** Settled stroke: w * settle(fc) + (1 - w) * settle(base). base defaults to BASE_FC (the evaluated setting);
  *  the drawing app's "Extra smooth" passes a lower base so it smooths visibly even with no tremor detected. */
-export function adaptiveSettle(t, xs, ys, { fc, w, base = BASE_FC }) {
+export function adaptiveSettle(t, xs, ys, { fc, w, base = BASE_FC, it = 0 }) {
+  // a stroke the drawing check calls deliberate gets only the light 8 Hz polish, even in "Extra smooth"
+  // (a 4 Hz polish alone shrinks a 3 Hz zigzag by about a quarter)
+  if (it > 0 && base < BASE_FC) base += (BASE_FC - base) * Math.min(1, it);
   const [ax, ay] = settle(t, xs, ys, fc), [bx, by] = settle(t, xs, ys, base);
   return [ax.map((v, i) => w * v + (1 - w) * bx[i]), ay.map((v, i) => w * v + (1 - w) * by[i])];
 }

@@ -1,12 +1,12 @@
 // Steady drawing app. Uses the SAME filter code as the lab (js/filters.js), so study results apply to it.
-import { Filter2D } from './filters.js?v=14';
-import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=14';
-import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=14';
-import { openReplay } from './replay.js?v=14';
-import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=14';
+import { Filter2D } from './filters.js?v=15';
+import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=15';
+import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=15';
+import { openReplay } from './replay.js?v=15';
+import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=15';
 // MM_PER_PX: the device's real size (js/calib.js); the filter's parameters are in millimetres
-import { MM_PER_PX, onCalibrationChange, openCalibration, calibrationLabel } from './calib.js?v=14';
-import { saveDrawing, loadDrawing } from './store.js?v=14';
+import { MM_PER_PX, onCalibrationChange, openCalibration, calibrationLabel } from './calib.js?v=15';
+import { saveDrawing, loadDrawing } from './store.js?v=15';
 
 const $ = (id) => document.getElementById(id);
 
@@ -170,7 +170,9 @@ function ingest(ev) {
     xm += dx; ym += dy;
   }
   const [fx, fy] = steadyF.step(t, xm, ym);
-  const dsx = xm - steadyF.fx.y2, dsy = ym - steadyF.fy.y2;                // the shake, mm
+  // the shake Steady is removing, mm: hand minus the zero-lag estimate, times how much of it the gate removes
+  // (so a slow, big wiggle that the drawing check keeps as drawing is not turned into shake marks)
+  const dsx = (xm - steadyF.fx.y2) * steadyF.fx.g, dsy = (ym - steadyF.fy.y2) * steadyF.fy.g;
   const [env, mark] = shakeT.step(t, fx, fy, dsx, dsy);
   if (Number.isFinite(fx) && Number.isFinite(fy)) {
     S.shake.push({ t, dx: xm - fx, dy: ym - fy });
@@ -463,7 +465,9 @@ function updateStatus() {
   if (!S.steady) { el.textContent = 'Steady is off: drawing your raw input'; return; }
   const info = steadyF.info(), st = STYLES.find(([k]) => k === S.style)[1];
   const sm = SMOOTH.find(([k]) => k === S.smooth)[1] + (S.style === 'none' ? '' : ` \u00b7 Shake style: ${st}`);
-  if (info && Number.isFinite(info.f0) && info.conf >= 0.5 && info.amp >= 0.15) {
+  const drawing = steadyF.fx.intent ? Math.max(steadyF.fx.intent(), steadyF.fy.intent()) : 0;
+  if (drawing > 0.5) el.textContent = `Slow, big wiggle: keeping it as drawing \u00b7 Smoothing: ${sm}`;
+  else if (info && Number.isFinite(info.f0) && info.conf >= 0.5 && info.amp >= 0.15) {
     el.textContent = `Removing a ${info.f0.toFixed(1)} Hz shake \u00b7 Smoothing: ${sm}`;
   } else el.textContent = `Steady is on: no shake detected yet \u00b7 Smoothing: ${sm}`;
 }
@@ -475,8 +479,9 @@ function updateShakeCard() {
   if (!S.shakeCard) return;
   const info = steadyF.info();
   const amp = Math.max(steadyF.fx.tremor_amp_mm(), steadyF.fy.tremor_amp_mm());
-  const sure = info && Number.isFinite(info.f0) && info.conf >= 0.5 && info.amp >= 0.15;
-  $('shakeLine').textContent = sure ? 'Shake detected' : 'No clear shake yet';
+  const drawing = steadyF.fx.intent ? Math.max(steadyF.fx.intent(), steadyF.fy.intent()) > 0.5 : false;
+  const sure = !drawing && info && Number.isFinite(info.f0) && info.conf >= 0.5 && info.amp >= 0.15;
+  $('shakeLine').textContent = drawing ? 'Slow, big wiggle: treated as drawing' : sure ? 'Shake detected' : 'No clear shake yet';
   $('shakeHz').textContent = sure ? `${info.f0.toFixed(1)} Hz` : '\u2013';
   $('shakeMm').textContent = sure ? `about ${amp.toFixed(1)} mm` : '\u2013';
   // trace

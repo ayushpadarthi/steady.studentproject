@@ -522,9 +522,10 @@ export class SteadyV2 {
  * back to plain light smoothing; with real rhythmic tremor it cancels it (see docs/history/07-review-and-research.md).
  */
 export class SteadyV3 {
-  constructor({ gate_lo = 0.1, gate_hi = 0.3, tau_g = 0.3, fin_fc = 10.0, v2 = {}, ...rest } = {}) {
+  constructor({ gate_lo = 0.1, gate_hi = 0.3, tau_g = 0.3, fin_fc = 10.0, draw_fc = 0, draw_fw = 0.5, draw_ac = 1.0, draw_aw = 2.0, v2 = {}, ...rest } = {}) {
     this.inner = new SteadyV2({ ...v2, ...rest });
     this.gate_lo = gate_lo; this.gate_hi = gate_hi; this.tau_g = tau_g;
+    Object.assign(this, { draw_fc, draw_fw, draw_ac, draw_aw });
     this.fin = new EMAFilter({ fc: fin_fc });
     this.freqs = this.inner.freqs;
     this.reset();
@@ -532,10 +533,20 @@ export class SteadyV3 {
   reset() { this.inner.reset(); this.fin.reset(); this.g = 0; this.gInit = false; this.t = null; this.out = NaN; this.y2 = NaN; }
   startStroke() { this.inner.startStroke(); this.fin.reset(); this.t = null; }
   start_stroke() { this.startStroke(); }
+  /** Drawing check (v5; off when draw_fc <= 0): 0..1, how much the detected rhythm looks like deliberate drawing.
+   *  A slow, big rhythm (under ~4 Hz, over ~1 mm) is far more likely a zigzag or wave than tremor. */
+  intent() {
+    if (this.draw_fc <= 0) return 0;
+    const hz = this.inner.tremor_hz(), amp = this.inner.tremor_amp_mm();
+    if (!(Number.isFinite(hz) && Number.isFinite(amp))) return 0;
+    const slow = Math.min(1, Math.max(0, (this.draw_fc - hz) / this.draw_fw + 0.5));
+    const big = Math.min(1, Math.max(0, (amp - this.draw_ac) / this.draw_aw + 0.5));
+    return slow * big;
+  }
   _gateTarget() {
     if (this.gate_lo < 0) return 1;
     const amp = this.inner.tremor_amp_mm();
-    return Math.min(1, Math.max(0, (amp - this.gate_lo) / (this.gate_hi - this.gate_lo)));
+    return Math.min(1, Math.max(0, (amp - this.gate_lo) / (this.gate_hi - this.gate_lo))) * (1 - this.intent());
   }
   step(t, z) {
     const y2 = this.inner.step(t, z);
@@ -563,18 +574,25 @@ export const V4_PARAMS = { gate_lo: 0.1, gate_hi: 0.3, tau_g: 0.3, fin_fc: 10.0,
 export class SteadyV4 extends SteadyV3 {
   constructor(opts = {}) { super({ ...V4_PARAMS, ...opts }); }
 }
+/** Steady v5 (2026-10-24) = v4 + the drawing check, so deliberate zigzags and waves are kept (V5_PARAMS in
+ *  filters.py; parity vs shared/test_vectors/steady_v5_kalman.json). */
+export const V5_PARAMS = { ...V4_PARAMS, draw_fc: 4.0, draw_fw: 0.5, draw_ac: 1.0, draw_aw: 2.0 };
+export class SteadyV5 extends SteadyV3 {
+  constructor(opts = {}) { super({ ...V5_PARAMS, ...opts }); }
+}
 
 /** Filters offered as study conditions (steady_v1 is deliberately absent). */
 export const FILTER_NAMES = ['raw', 'ema', 'one_euro', 'steady'];
 /** Filters selectable in free play. */
-export const FREE_FILTER_NAMES = [...FILTER_NAMES, 'steady_v3', 'steady_v2', 'steady_v1'];
+export const FREE_FILTER_NAMES = [...FILTER_NAMES, 'steady_v4', 'steady_v3', 'steady_v2', 'steady_v1'];
 
 export function makeFilter(name, opts = {}) {
   switch (name) {
     case 'raw': return new RawFilter();
     case 'ema': return new EMAFilter(opts);
     case 'one_euro': return new OneEuroFilter(opts);
-    case 'steady': return new SteadyV4(opts);
+    case 'steady': return new SteadyV5(opts);
+    case 'steady_v4': return new SteadyV4(opts);
     case 'steady_v3': return new SteadyV3(opts);
     case 'steady_v2': return new SteadyV2(opts);
     case 'steady_v1': return new SteadyFilter(opts);
@@ -613,7 +631,7 @@ export class Filter2D {
    * amp = sqrt(mean over axes of sum(act_mix)) (per-axis amplitude).
    */
   info() {
-    if (this.name === 'steady' || this.name === 'steady_v3' || this.name === 'steady_v2') {
+    if (this.name === 'steady' || this.name === 'steady_v4' || this.name === 'steady_v3' || this.name === 'steady_v2') {
       const ax = this.fx.act, ay = this.fy.act, K = ax.length;
       if (!this._sum || this._sum.length !== K) this._sum = new Float64Array(K);
       const a = this._sum; let tot = 0;

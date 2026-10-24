@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#1f6b4e">
 <title>Steady Lab</title>
-<link rel="stylesheet" href="css/style.css?v=14">
+<link rel="stylesheet" href="css/style.css?v=15">
 </head>
 <body>
 <header>
@@ -28,7 +28,8 @@
           <option value="raw">No filter (raw)</option>
           <option value="ema">Moving average (EMA, 2 Hz)</option>
           <option value="one_euro">One-Euro filter</option>
-          <option value="steady" selected>Steady (current, v4)</option>
+          <option value="steady" selected>Steady (current, v5)</option>
+          <option value="steady_v4">Steady v4 (no drawing check)</option>
           <option value="steady_v3">Steady v3 (older settings)</option>
           <option value="steady_v2">Steady v2 (no gate)</option>
           <option value="steady_v1">Steady v1 (original)</option>
@@ -138,7 +139,7 @@
     <canvas id="draw"></canvas>
   </section>
 </main>
-<script type="module" src="js/main.js?v=14"></script>
+<script type="module" src="js/main.js?v=15"></script>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
 </body>
 </html>
