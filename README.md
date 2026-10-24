@@ -1,67 +1,112 @@
 # Steady web app
 
-Static, dependency-free web app (vanilla HTML + ES modules). No build step, no network access, nothing leaves the browser.
+Static, dependency-free web app (plain HTML + JavaScript modules). No build step, no network calls: nothing the
+user draws leaves the browser (preferences and the check-in log stay in `localStorage` on the device).
+Live: https://ayushpadarthi.github.io/steady.studentproject/
 
 ## Pages
-- `index.html` — start page linking the two below.
-- **`draw.html` — the drawing app** (what users and judges see): full-screen paper, Steady on/off switch, brush/eraser, 10 colours, 4 sizes, pen pressure, undo/redo, two-tap clear (undoable), save PNG, palm rejection after a pen is used, keyboard shortcuts (Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z, Cmd/Ctrl+S, B, E, S, [ ]). A **Demo** panel adds simulated tremor (a list of tremor-type buttons: Healthy, ET mild, ET moderate, ET severe, Parkinson's rest; the chosen type is remembered, the switch is never restored as on) and can show the raw shaky line in grey. A **Smoothing** button (Off / Smooth (default) / Extra smooth) settles each finished brush stroke after pen-up (`js/settle.js`, port of `steady/settle.py`, parity vs `shared/test_vectors/settle.json`); its strength follows the tremor Steady detected. Demo tremor is re-seeded on every page load. The Demo panel also has **Save before/after picture** (one PNG, cropped to the drawing: raw input strokes left, "Without Steady"; Steady/settled strokes right, "With Steady"; white background, same renderer as the canvas) and a **"Your shake" card** switch (off by default): live frequency (Hz) and size (mm, larger of the x/y `tremor_amp_mm()`) shown only when conf >= 0.5 and amp >= 0.15 mm (same rule as the status line), plus a 2 s trace of raw minus filtered position. Files: `js/draw.js`, `css/draw.css`.
-- **Shake style** (draw app, Line menu next to Smoothing, key K): Steady separates the shake (input minus `SteadyV3.y2`, its zero-lag estimate) and `js/shakestyle.js` (port of `steady/shake_style.py`, parity vs `shared/test_vectors/shake_style.json`) turns it into a shake size and one mark per tremor beat. Styles: None, Keep 30 %, Ink pulse, Stipple, Hatching; chosen per stroke at pen-down, only with Steady on.
-- **`checkin.html` — spiral check-in:** trace a guide spiral; shake size, shake speed, distance off the spiral (raw hand vs Steady); dated log on the device with chart and CSV export. Files: `js/checkin.js`.
-- **`trace.html` — trace and colour:** 5 trace pages (5 mm lane) and 3 colouring pages, scored as % ink inside the lines and % covered/filled, for the screen line and the raw hand. Files: `js/trace.js`.
-- Shared by those two pages: `js/pad.js` (input pipeline = the draw app's: coalesced events, palm rejection, simulated tremor, one Steady filter, settling with the shake-size limit), `js/pagekit.js` (Steady switch, Demo panel), `css/pages.css`. The draw app also has a slow-motion stroke replay (`js/replay.js`, Demo panel or key R) and key M to cycle Smoothing.
-- **Releases:** pages load files as `?v=N` so browsers never mix old and new code (GitHub Pages caches for 10 min). Bump N in every `.html` and in the `import` lines when publishing (currently 10).
-- **`lab.html` — the testing & study bench** (formerly `index.html`): filter comparison, synthetic tremor, calibration, study mode with CSV export, Web Serial pen link. Files: `js/main.js`, `css/style.css`.
-- Both pages use the **same** `js/filters.js`, so study results apply to the drawing app.
+| Page | Role | Main files |
+|---|---|---|
+| `index.html` | Start page | (inline CSS) |
+| **`draw.html`** | **The product:** full-screen drawing with the Steady filter | `js/draw.js`, `css/draw.css` |
+| `trace.html` | Measurement task: trace (5 mm lane) and colouring pages, scored for the screen line and the raw hand | `js/trace.js` |
+| `checkin.html` | Measurement task: spiral check-in with shake size/speed and a dated log on the device | `js/checkin.js` |
+| `lab.html` | Evidence tool: compare filters on one drawing, study mode with CSV export, tremor-pen link + truth meter | `js/main.js`, `css/style.css` |
 
-Drawing-app design rules (keep them when editing): canvas first, tools fade while drawing; every target >= 48 px with >= 8 px gaps; steppers instead of sliders; state shown in words, not colour only; one accent colour (green = Steady on); system font; no gradients, glows, glass panels or decorative icons. Drawing-app preferences (not drawings) are kept in `localStorage`; simulated tremor is never restored as "on". `window.__steadyDraw` and the `__testT` event property exist only for automated checks.
+All pages use the **same** `js/filters.js`, so study results apply to the drawing app.
 
-## Run
+### Drawing app
+- **Basics:** Steady on/off switch, brush and eraser, 10 colours, 4 sizes, pen pressure, undo/redo, two-tap clear,
+  save PNG, palm rejection once a pen is used.
+- **Shortcuts:** Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z, Cmd/Ctrl+S, B, E, S, M (smoothing), K (shake style), R (replay), [ ].
+- **Line menu:**
+  - Smoothing: Off / Smooth / Extra. Each finished stroke settles after pen-up, scaled by the detected tremor and
+    limited to a shake-sized movement.
+  - Shake style (*experimental*, future work): None / Keep 30 % / Ink pulse / Stipple / Hatching.
+- **Demo panel:**
+  - simulated tremor presets (never restored as "on");
+  - raw line in grey;
+  - a "Your shake" card;
+  - slow-motion replay;
+  - a before/after picture;
+  - links to the other pages.
+
+### Design rules (keep them)
+- Canvas first; tools fade while drawing.
+- Targets at least 48 px in the drawing app and at least 40 px in the lab (44 px on touch screens).
+- State shown in words, not colour alone.
+- One accent colour (green = Steady); system font.
+- No gradients, glows or decorative icons.
+- Works at 375 px wide.
+
+## Run locally
 ```
 cd software
-python3 -m http.server 8000      # then open http://localhost:8000/app/ in Chrome or Edge
+python3 -m http.server 8765      # then open http://localhost:8765/app/
 ```
-Chrome/Edge are needed only for the optional Web Serial pen link (`localhost` counts as a secure origin). The drawing/filter/study features work in any modern browser.
+Chrome or Edge are needed only for the tremor-pen link (Web Serial; `localhost` counts as secure). Everything else
+works in any modern browser, including Safari on iPad.
 
 ## Tests
-```
-node software/app/tests/filters.test.mjs
-```
-Sanity tests (every filter, FFT, v1 tracker, Filter2D/stroke semantics) plus parity with the Python reference vectors in `software/shared/test_vectors/`: `steady_kalman.json` (steady_v1, ema, one_euro; tol 1e-6, in practice ~1e-14) and `steady_v2_kalman.json` (steady = SteadyV2: output, tremor_hz and mixer weights, tol 1e-9, in practice ~2e-11, includes `start_stroke()` and NaN samples). It also times SteadyV2 x 2 axes (must stay < 0.3 ms/sample; measured ~0.04 ms in Chrome). Under `node` the vectors are read from disk; if a file is missing a SKIP line is printed.
-Without `node`, run them in a browser: serve the `software/` directory so `../../shared` is reachable:
-```
-cd software && python3 -m http.server 8137      # any free port
-```
-open `http://localhost:8137/app/lab.html`, then in the console: `(await import('/app/tests/filters.test.mjs')).runTests()` (returns the result list; `.parity` holds max abs errors, `.perf` the timing).
+Serve `software/` (so `../../shared/test_vectors` is reachable), open any page, then in the console:
+`(await import('/app/tests/filters.test.mjs')).runTests()`. That runs 45 checks:
+- every filter, plus stroke semantics;
+- parity with the Python reference vectors, v1-v4 (output, gate and zero-lag estimate to about 1e-12);
+- settling and the shake-size limit;
+- the shake-style tracker;
+- the truth meter;
+- a speed check (Steady on both axes must stay under 0.3 ms per sample; about 0.04 ms in Chrome).
 
-## Filters
-- `raw`, `ema` (fc 2 Hz), `one_euro` (1.0/0.007/1.0).
-- `steady` = **SteadyV4** since 2026-10-21 (the SteadyV3 algorithm with `V4_PARAMS`, retuned on realistic tremor; parity vs `shared/test_vectors/steady_v4_kalman.json`, ~2e-12; settling thresholds 0.2/0.4 mm). `steady_v3` keeps the 2026-10-20 settings (free play only). Previously: `steady` = **SteadyV3** (since 2026-10-20): SteadyV2 below, applied only as far as clear tremor is detected (gate 0.1→0.3 mm), then a 10 Hz EMA; exact port of `SteadyV3` in `software/core/steady/filters.py`, parity vs `shared/test_vectors/steady_v3_kalman.json` (~1.5e-11). `steady_v2` = the ungated filter (free play only).
-- SteadyV2 (exact port of `SteadyV2`/`SteadyBank` in `software/core/steady/filters.py`): 4 oscillator-bank Kalman models (q_i = 1e3, 5e3, 25e3, 125e3; oscillators 3-12 Hz at 0.5 Hz, K = 19, 40 states) mixed by a leaky likelihood window. No frequency tracker. Block-structured `F P F^T` (O(n^2)). One independent instance per axis (`Filter2D`). Read-outs: `tremor_hz` (argmax of the weight-mixed oscillator activity with parabolic refinement), `tremor_conf` (share within +-1 Hz of the peak), `tremor_amp_mm`. The page sums x and y activity for f0/conf and shows the per-axis amplitude.
-- `steady_v1` = the old Kalman + FFT-tracker filter, kept for the v1 parity vector and selectable in free play only. Study conditions (`FILTER_NAMES`, `study.js`) are raw/ema/one_euro/steady.
+With `node` installed: `node software/app/tests/filters.test.mjs`.
 
-## Stroke handling
-Tremor does not stop when the pen lifts, so the filter must not forget it on every stroke. `pointerdown` calls `filter.startStroke()` (= `start_stroke()` in Python): SteadyV2 keeps its oscillator state and restarts the intended-motion state diffusely at the next sample. For raw/ema/one_euro/steady_v1 `startStroke()` is a full reset (they have no persistent state worth keeping). A new filter instance (= forgotten tremor state) is created only when the user changes the filter, starts a new study session/participant, or a new study condition starts. In study mode there is one filter per condition and `startStroke()` is called at each task start and each stroke.
+## Releases
+Pages load files as `?v=N` so browsers never mix old and new code (GitHub Pages caches for 10 minutes). **Bump N in
+every `.html` and every `import` line when publishing** (currently 13).
 
-## Files
-- `js/settle.js` ink settling (zero-phase smoothing of finished strokes; `settle`, `adaptiveParams`, `adaptiveSettle`).
-- `js/tremor.js` realistic synthetic tremor (irregular since 2026-10-20: fast amplitude changes, frequency wander, wandering axis) (port of `software/core/steady/tremor_models.py`; `PRESETS`, `PRESET_ORDER`, `makeTremor(key, overrides, seed)`, `SpeedEstimator`). `js/compare.js` the compare-filters overlay: 'While drawing' vs 'Final line (after pen-up)' (only Steady settles), with wiggle, lag while drawing, and 'off the line' (distance from the intended path, available when tremor is simulated because the lab then records the pre-tremor pointer position).
-- `js/filters.js` filters above, `TremorTracker` (port of `tremor_estimator.py`, used by steady_v1 and as the read-out for ema/one_euro), `Filter2D`.
-- `js/tasks.js` spiral/line/square templates and quick metrics. `js/study.js` Latin square + CSV writers. `js/serial.js` Web Serial. `js/main.js` UI.
+## Filters (`js/filters.js`)
+| Name | What |
+|---|---|
+| `raw`, `ema` (2 Hz), `one_euro` (1.0 / 0.007 / 1.0) | Baselines |
+| `steady` = **SteadyV4** | SteadyV3 algorithm with `V4_PARAMS` (retuned on realistic tremor). Parity: `shared/test_vectors/steady_v4_kalman.json` |
+| `steady_v3` | Gated SteadyV2 (0.1→0.3 mm detected tremor) + 10 Hz finish; exposes `y2`, the zero-lag estimate used by shake style |
+| `steady_v2` | Mix of 4 Kalman filters, each with 19 oscillators at 3-12 Hz |
+| `steady_v1` | Original filter with an FFT frequency tracker (free play only) |
 
-## Using it
-- **Free play**: pick a filter; the grey trace is the raw (tremor-injected) pointer path, the ink trace is the filtered output. Readouts show estimated tremor f0, confidence, mode (steady: tremor amplitude), an estimated lag (component of raw-minus-filtered along the filtered velocity, only when moving faster than 20 mm/s; includes tremor noise, so treat as approximate) and the pointer event rate.
-- **Synthetic tremor**: toggle + preset dropdown (healthy, ET mild/moderate/severe, Parkinson's rest, old sine; default ET moderate) + editable frequency (3-12 Hz) and peak amplitude (0-10 mm). Choosing a preset fills both numbers; editing them shows "Custom (based on X)". The generator is the realistic model of `tremor_models.py`: frequency drifts (Ornstein-Uhlenbeck), amplitude waxes and wanes, the motion is an ellipse with a harmonic, essential tremor grows with drawing speed and Parkinson's rest tremor is suppressed while moving and re-emerges after a pause. Speed = magnitude of the pointer velocity of the UN-tremored path (EMA 80 ms). One generator runs continuously in time (not restarted per stroke) and is added to x and y before filtering. Frequency and amplitude go into every CSV row and the preset into a `# tremor_preset=` line (`none`, a preset key, or `custom(based_on=key)`); the CSV row format is unchanged. Parameters are plausible values from the literature, not patient measurements.
-- **Compare filters on this drawing** (free play, button disabled until a stroke exists): every free-play stroke's raw input (after tremor injection, before filtering) is recorded; the overlay re-runs a fresh raw / ema / one_euro / steady filter over the identical samples (one instance, `startStroke()` at each stroke) in a 2x2 grid at one scale. Under each panel: **wiggle** = RMS distance (mm) of the output from its own centred 0.33 s moving average; **lag vs raw** = time shift 0-200 ms (2 ms steps) of the raw path that minimises mean squared difference to the filtered path (raw = 0 by definition). Lag estimates are approximate (the raw path contains the tremor). Esc or Close leaves it.
-- **Calibration**: default 0.2646 mm per CSS px (96 px/in). "Calibrate with card" shows a 200 px bar; measure it with a ruler and enter mm. Do this on the study display (and keep browser zoom at 100%).
+**Strokes:** tremor continues while the pen is lifted, so `pointerdown` calls `startStroke()`, which keeps the
+learned tremor and restarts only the line. A new filter (forgetting the tremor) is created only when the filter
+changes, a new study session starts, or a new study condition starts.
 
-## Study protocol
-1. Switch to **Study**, enter participant ID (letters/digits/-/_ only; no other personal data is collected), optionally pick the Latin-square row (default: derived from the ID's trailing number, else hash). Set tremor injection first if using Phase 1 synthetic tremor and keep it fixed for the whole session.
-2. Condition order is a Williams-balanced 4x4 Latin square over raw/ema/one_euro/steady (index rows `[0,1,3,2] [1,2,0,3] [2,3,1,0] [3,0,2,1]` into raw,ema,one_euro,steady). The participant sees only "Condition k of 4" (single-blind); raw trace hidden unless ticked.
-3. Per condition: spiral (3 turns, trace faint template) -> line -> square -> free draw, repeated `reps` times. Press **Done** after each task (**Redo** discards). Quick metrics appear (spiral radial error for filtered and raw, line straightness, path-length ratio). Each trial downloads `trial_<participant>_<condition>_<task>_<n>.csv` (auto-download can be turned off; use "Download all trial CSVs" later).
-4. After each condition, the participant rates "how much control did you have" 0-10; this is stored in the summary CSV (`summary_<participant>.csv`) with mean spiral RMS error.
-5. Sequence/preference questions are not in the app; ask verbally and record on paper.
+## Other files
+| File | What |
+|---|---|
+| `js/settle.js` | After-pen-up settling: zero-phase low-pass, adaptive strength (thresholds 0.2/0.4 mm for v4), shake-size limit |
+| `js/tremor.js` | Realistic simulated tremor (port of `software/core/steady/tremor_models.py`) |
+| `js/compare.js` | Compare overlay: "While drawing" vs "Final line", with wiggle, lag, and distance off the intended line (when tremor is simulated) |
+| `js/pad.js`, `js/pagekit.js`, `css/pages.css` | Shared input pipeline and Demo panel for the trace and check-in pages |
+| `js/shakestyle.js`, `js/replay.js` | Shake style tracker; slow-motion replay |
+| `js/serial.js`, `js/penmeter.js` | Tremor-pen link over USB; truth meter (frequency and tip size from the pen's gyro and from its commanded movement) |
+| `js/tasks.js`, `js/study.js` | Spiral/line/square templates and metrics; Latin square and CSV writers |
 
-CSV: `# ...` metadata lines, then `t_ms,x_mm,y_mm,filtered_x_mm,filtered_y_mm,pressure,condition,task,participant,trial,synthetic_tremor_hz,synthetic_tremor_mm`. `t_ms` is relative to trial start; x/y are mm from the canvas top-left (template centre is in `# template=`); `# stroke_starts_ms=` lists pen-down times (each pen-down calls `startStroke()`; the row format has no stroke column).
+## Study mode (lab)
+1. Switch to **Study** and enter a participant ID (letters, digits, - and _ only; no other personal data). The Latin-square row comes from the ID.
+2. Conditions run in a Williams-balanced 4×4 Latin square over raw / ema / one_euro / steady. The participant only sees "Condition k of 4".
+3. Each condition has four tasks: spiral, then line, then square, then free drawing. After each one, press **Done** (or **Redo**). Each trial downloads `trial_<participant>_<condition>_<task>_<n>.csv`.
+4. After each condition, the participant rates "How much control did you have?" from 0 to 10. This goes into `summary_<participant>.csv`.
+5. **Only with an approved protocol.** Calibrate mm first and keep browser zoom at 100 %.
 
-## Pen (Web Serial)
-Connect (921600 baud) to see accel/gyro plotted live from `S,...` lines, `Ping` sends `P`, and "drive motor with synthetic tremor settings" sends `M,<Hz>,<pct>` (amplitude 0-4 mm maps to 0-100 %, larger values clamp to 100 %; `M,0,0` on stop). Do not enable both software injection and the motor for a trial unless intended. Unsupported browsers just get the button disabled.
+The CSV has `# ...` metadata lines, then these columns:
+`t_ms,x_mm,y_mm,filtered_x_mm,filtered_y_mm,pressure,condition,task,participant,trial,synthetic_tremor_hz,synthetic_tremor_mm`.
+
+## Tremor pen (lab, Chrome/Edge)
+- **Connect** plots the pen's accelerometer and gyro.
+- **"Shake the real pen"** sends `T,<Hz>,<mm>,<0|1>` with the simulated-tremor settings, refreshes every 5 s, and pauses the software tremor.
+- **Arm length** sends `L,<mm>`.
+- **Truth meter** shows three readings, saved with "Record this row" → CSV:
+  - what the pen was asked to do (from its `C` lines);
+  - what its gyro measured (zero-phase 1.5 Hz high-pass, integrated to an angle, then × arm length);
+  - what Steady detected from the screen.
+
+Protocol: `docs/04-architecture-spec.md`. Hardware: `hardware/README.md`.
+
+`window.__steadyDraw`, `window.__steady`, `window.__steadyPen`, `window.__steadyCheckin`, `window.__steadyTrace` and
+the `__testT` event property exist only for automated checks.

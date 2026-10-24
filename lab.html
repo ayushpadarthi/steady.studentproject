@@ -3,14 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
 <title>Steady Lab</title>
-<link rel="stylesheet" href="css/style.css?v=12">
+<link rel="stylesheet" href="css/style.css?v=13">
 </head>
 <body>
 <header>
-  <h1>Steady</h1>
-  <span class="sub">testing &amp; study bench</span> <a class="sub" href="draw.html">Open drawing app</a>
-  <nav>
+  <div class="brand"><h1><a href="index.html">Steady</a></h1><span class="sub">Lab: testing and studies</span></div>
+  <nav aria-label="Lab mode">
+    <a class="link" href="draw.html">Drawing app</a>
     <button id="modeFree" class="tab on">Free play</button>
     <button id="modeStudy" class="tab">Study</button>
   </nav>
@@ -21,52 +22,52 @@
       <h2>Filter</h2>
       <label>Filter
         <select id="filterSel">
-          <option value="raw">raw</option>
-          <option value="ema">ema (2 Hz)</option>
-          <option value="one_euro">one-euro</option>
-          <option value="steady" selected>steady (v3: gated oscillator bank)</option>
-          <option value="steady_v3">steady v3 (2026-10-20 settings, free play only)</option>
-          <option value="steady_v2">steady v2 (no gate, free play only)</option>
-          <option value="steady_v1">steady v1 (old, free play only)</option>
+          <option value="raw">No filter (raw)</option>
+          <option value="ema">Moving average (EMA, 2 Hz)</option>
+          <option value="one_euro">One-Euro filter</option>
+          <option value="steady" selected>Steady (current, v4)</option>
+          <option value="steady_v3">Steady v3 (older settings)</option>
+          <option value="steady_v2">Steady v2 (no gate)</option>
+          <option value="steady_v1">Steady v1 (original)</option>
         </select>
       </label>
-      <label class="chk"><input type="checkbox" id="showRaw" checked> show raw stroke (grey)</label>
-      <label id="guideLbl">Guide template
-        <select id="guideSel"><option value="none">none</option><option value="spiral">spiral (3 turns)</option><option value="line">line</option><option value="square">square</option></select></label>
+      <label class="chk"><input type="checkbox" id="showRaw" checked> Show the raw line in grey</label>
+      <label id="guideLbl">Guide shape
+        <select id="guideSel"><option value="none">None</option><option value="spiral">Spiral (3 turns)</option><option value="line">Line</option><option value="square">Square</option></select></label>
       <dl class="readout">
-        <dt>Tremor f0</dt><dd id="roF0">-</dd>
+        <dt>Shake speed</dt><dd id="roF0">-</dd>
         <dt>Confidence</dt><dd id="roConf">-</dd>
-        <dt>Mode</dt><dd id="roMode">-</dd>
-        <dt>Lag (est.)</dt><dd id="roLag">-</dd>
-        <dt>Sample rate</dt><dd id="roFs">-</dd>
+        <dt>Filter state</dt><dd id="roMode">-</dd>
+        <dt>Lag (estimate)</dt><dd id="roLag">-</dd>
+        <dt>Input rate</dt><dd id="roFs">-</dd>
       </dl>
       <div class="bar"><div id="confBar"></div></div>
-      <button id="btnClear">Clear canvas</button>
-      <button id="btnCompare" disabled>Compare filters on this drawing</button>
+      <div class="row"><button id="btnClear">Clear</button><button id="btnCompare" class="primary" disabled>Compare filters</button></div>
+      <p class="hint">Compare runs every filter on exactly the same drawing (Free play).</p>
     </section>
 
     <section id="secTremor">
-      <h2>Synthetic tremor</h2>
-      <label class="chk"><input type="checkbox" id="synOn"> inject into pointer stream</label>
+      <h2>Simulated tremor</h2>
+      <label class="chk"><input type="checkbox" id="synOn"> Add simulated tremor to my drawing</label>
       <label>Tremor type
         <select id="synPreset"></select></label>
       <p class="hint" id="synNote"></p>
       <label>Frequency (Hz)
         <input type="number" id="synHz" min="3" max="12" step="0.1" value="6.5"></label>
-      <label>Amplitude (mm, peak, 0-10)
+      <label>Size (mm, peak, 0-10)
         <input type="number" id="synMm" min="0" max="10" step="0.1" value="2.5"></label>
-      <p class="hint">Realistic model: frequency drifts, size waxes and wanes, elliptical, speed-dependent. Choosing a type fills both numbers; editing them makes it Custom.</p>
+      <p class="hint">Realistic model: the speed drifts and the size changes from beat to beat, like real tremor. Choosing a type fills both numbers; editing them makes it "Custom".</p>
     </section>
 
     <section id="secCal">
       <h2>Calibration</h2>
-      <label>mm per CSS pixel
+      <label>Millimetres per screen pixel
         <input type="number" id="mmPerPx" min="0.05" max="2" step="0.0001" value="0.2646"></label>
       <div class="row">
         <button id="calReset">96 px/in</button>
         <button id="calCard">Calibrate with card</button>
       </div>
-      <p class="hint" id="calHint">Default 0.2646 mm/px (96 px/in). Calibrate so the template matches real size.</p>
+      <p class="hint" id="calHint">Default 0.2646 mm per pixel (96 px per inch). Calibrate so shapes on screen match real size; all mm numbers depend on it.</p>
     </section>
 
     <section id="secStudy" hidden>
@@ -84,7 +85,7 @@
         <div id="stProgress" class="prog"></div>
         <p id="stTask" class="task"></p>
         <div class="row">
-          <button id="btnDone" class="primary">Done - save trial</button>
+          <button id="btnDone" class="primary">Done: save trial</button>
           <button id="btnRedo">Redo</button>
         </div>
         <pre id="stMetrics" class="metrics"></pre>
@@ -105,13 +106,13 @@
     </section>
 
     <section id="secSerial">
-      <h2>Pen (Web Serial)</h2>
+      <h2>Tremor pen (USB)</h2>
       <p class="hint" id="serialNote"></p>
       <div class="row">
         <button id="btnConnect">Connect</button>
         <button id="btnPing" disabled>Ping</button>
       </div>
-      <label class="chk"><input type="checkbox" id="motorMirror" disabled> shake the real pen with the tremor settings above (the fake shake is switched off meanwhile)</label>
+      <label class="chk"><input type="checkbox" id="motorMirror" disabled> Shake the real pen with the tremor settings above (simulated tremor is paused meanwhile)</label>
       <label>Pen arm length (servo shaft to stylus tip, mm)
         <input type="number" id="armMm" min="10" max="120" step="0.5" value="25"></label>
       <div class="truth">
@@ -122,17 +123,18 @@
         <div class="row"><button id="btnTruthRec" disabled>Record this row</button><button id="btnTruthCsv" disabled>Download CSV</button></div>
         <p class="hint" id="truthN"></p>
       </div>
-      <label>Plot
-        <select id="imuGroup"><option value="accel">accel (g)</option><option value="gyro">gyro (deg/s)</option></select></label>
+      <label>Sensor plot
+        <select id="imuGroup"><option value="accel">Accelerometer (g)</option><option value="gyro">Gyroscope (deg/s)</option></select></label>
       <canvas id="imuCanvas" width="300" height="90"></canvas>
       <pre id="serialLog" class="log"></pre>
     </section>
   </aside>
   <section class="stage">
     <div id="banner"></div>
+    <p id="emptyHint" class="empty-hint">Draw here. Turn on simulated tremor (left) to see what each filter does.</p>
     <canvas id="draw"></canvas>
   </section>
 </main>
-<script type="module" src="js/main.js?v=12"></script>
+<script type="module" src="js/main.js?v=13"></script>
 </body>
 </html>

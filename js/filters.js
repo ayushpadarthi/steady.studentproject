@@ -519,7 +519,7 @@ export class SteadyV2 {
  *   y2 = v2.step(t,z); g_t = clip((amp - gate_lo)/(gate_hi - gate_lo), 0, 1), amp = v2.tremor_amp_mm()
  *   g += (g_t - g)(1 - exp(-dt/tau_g)) (first output: g = g_t);  out = EMA(fin_fc).step(t, g*y2 + (1-g)*z)
  * Why: on small or irregular tremor the oscillator bank has little to remove and can add error, so the gate falls
- * back to plain light smoothing; with real rhythmic tremor it cancels it (see docs/07-review-and-research.md).
+ * back to plain light smoothing; with real rhythmic tremor it cancels it (see docs/history/07-review-and-research.md).
  */
 export class SteadyV3 {
   constructor({ gate_lo = 0.1, gate_hi = 0.3, tau_g = 0.3, fin_fc = 10.0, v2 = {}, ...rest } = {}) {

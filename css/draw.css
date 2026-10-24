@@ -188,3 +188,6 @@ button.tool.wide[data-mode="off"] svg { opacity: .45; }
 .warn-note { color: #8a1c1c; }
 button.tool.wide.styled .badge { background: var(--steady); }
 button.tool.wide span { white-space: nowrap; }
+a.mark { color: inherit; text-decoration: none; }
+a.mark:hover { text-decoration: underline; }
+.tag { font-size: 11px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; }

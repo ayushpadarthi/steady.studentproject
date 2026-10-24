@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
 <title>Steady</title>
-<link rel="stylesheet" href="css/draw.css?v=12">
+<link rel="stylesheet" href="css/draw.css?v=13">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -23,7 +23,7 @@
 
 <header class="top" data-ui>
   <div class="brand">
-    <span class="mark">Steady</span>
+    <a class="mark" href="index.html" title="Home">Steady</a>
     <span id="status" class="status" aria-live="polite">Tremor filter on</span>
   </div>
   <div class="actions">
@@ -64,7 +64,7 @@
   <p class="pop-title">Smoothing</p>
   <p class="pop-note">While you draw, Steady keeps the line fast. When you lift the pen, the stroke can settle into a smoother line. The amount follows the shake Steady has measured.</p>
   <div id="smoothList" class="presets" role="group" aria-label="Smoothing amount"></div>
-  <p class="pop-title">Shake style</p>
+  <p class="pop-title">Shake style <span class="tag">experimental</span></p>
   <p class="pop-note">Steady separates your shake from the line you meant. Instead of only deleting it, it can become part of the brush. The line still goes where you meant it to.</p>
   <p id="styleNote" class="pop-note warn-note" hidden>Turn Steady on to use a shake style.</p>
   <div id="styleList" class="presets" role="group" aria-label="Shake style"></div>
@@ -83,6 +83,6 @@
 
 <div id="flash" class="flash" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="js/draw.js?v=12"></script>
+<script type="module" src="js/draw.js?v=13"></script>
 </body>
 </html>

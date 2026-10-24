@@ -5,9 +5,9 @@
 //   live = what Steady drew while the pen was down
 //   pts  = the final line on screen (live, settled after pen-up when Smoothing is on; raw when Steady is off)
 // All coordinates are CSS pixels on the canvas.
-import { Filter2D } from './filters.js?v=12';
-import { makeTremor, SpeedEstimator, PRESETS } from './tremor.js?v=12';
-import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=12';
+import { Filter2D } from './filters.js?v=13';
+import { makeTremor, SpeedEstimator, PRESETS } from './tremor.js?v=13';
+import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=13';
 
 export const MM_PER_PX = 0.2646;
 export const SMOOTH_K = { off: null, smooth: 0.5, extra: 0.3 };
@@ -126,18 +126,4 @@ export function createPad(ink, ghost, opts = {}) {
 /** Settle a list of {x, y} px points with adaptive parameters (+ optional base cutoff). */
 export function settleWith(t, pts, prm) {
   return adaptiveSettle(t, pts.map((p) => p.x), pts.map((p) => p.y), prm);
-}
-
-/** Two-tap confirm for destructive buttons (an accidental tap, common with tremor, never deletes anything). */
-export function twoTap(btn, label, armedLabel, action) {
-  let timer = null;
-  btn.addEventListener('click', () => {
-    if (!btn.classList.contains('armed')) {
-      btn.classList.add('armed'); btn.querySelector('span').textContent = armedLabel;
-      timer = setTimeout(() => { btn.classList.remove('armed'); btn.querySelector('span').textContent = label; }, 3000);
-      return;
-    }
-    clearTimeout(timer); btn.classList.remove('armed'); btn.querySelector('span').textContent = label;
-    action();
-  });
 }

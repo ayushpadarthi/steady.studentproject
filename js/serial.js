@@ -75,12 +75,6 @@ export class SteadySerial {
   stopShake() { return this._send('X\n'); }
   /** Shaft-to-tip distance of the servo pen, mm (10-120). */
   setArm(mm) { return this._send(`L,${(+mm).toFixed(1)}\n`); }
-  /** v1 (motor) pen: drive the tremor-injector motor. freq_hz > 0, amp_pct 0-100. */
-  setTremor(freq, ampPct) {
-    const f = Math.max(0, +freq || 0), a = Math.min(100, Math.max(0, +ampPct || 0));
-    return this._send(`M,${f.toFixed(2)},${a.toFixed(1)}\n`);
-  }
-  stopTremor() { return this._send('M,0,0\n'); }
   async disconnect() {
     this.connected = false;
     try { await this.reader?.cancel(); } catch {}

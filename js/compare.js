@@ -7,11 +7,11 @@
 // Numbers: wiggle (RMS distance from the line's own 0.33 s moving average: lower = smoother), lag while drawing
 // (time shift vs the raw input), and accuracy (RMS distance from the intended line, only known when the shake is
 // simulated, because then the lab also records where the hand really was).
-import { Filter2D } from './filters.js?v=12';
-import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=12';
+import { Filter2D } from './filters.js?v=13';
+import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=13';
 
 export const COMPARE_FILTERS = [
-  ['raw', 'Raw (no filter)'], ['ema', 'EMA (2 Hz)'], ['one_euro', 'One-euro'], ['steady', 'Steady'],
+  ['raw', 'No filter (raw)'], ['ema', 'Moving average (2 Hz)'], ['one_euro', 'One-Euro filter'], ['steady', 'Steady'],
 ];
 export const WIGGLE_WINDOW_S = 0.33;
 export const MAX_LAG_S = 0.2;

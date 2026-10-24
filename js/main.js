@@ -1,11 +1,11 @@
 // Steady app: drawing canvas, live filters, synthetic tremor, study mode, optional serial.
-import { Filter2D, TremorTracker } from './filters.js?v=12';
-import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=12';
-import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=12';
-import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=12';
-import { PenMeter } from './penmeter.js?v=12';
-import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=12';
-import { openCompare } from './compare.js?v=12';
+import { Filter2D, TremorTracker } from './filters.js?v=13';
+import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=13';
+import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=13';
+import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=13';
+import { PenMeter } from './penmeter.js?v=13';
+import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=13';
+import { openCompare } from './compare.js?v=13';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('draw'), ctx = canvas.getContext('2d');
@@ -55,6 +55,7 @@ function polyline(pts, color, width) {
 }
 function showRaw() { return S.mode === 'study' ? $('studyRaw').checked : $('showRaw').checked; }
 function redraw() {
+  $('emptyHint').hidden = S.strokes.length > 0 || S.mode === 'study';
   ctx.clearRect(0, 0, S.w, S.h);
   if (S.template && S.template.polyline.length) {
     const cx = S.w / 2, cy = S.h / 2;
@@ -132,7 +133,7 @@ canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   try { canvas.setPointerCapture(e.pointerId); } catch {} // can throw for synthetic events (automated checks)
   S.drawing = true; S.filter.startStroke(); S.mon.reset(); S.lag.hist = []; S.lag.ok = false;
-  S.cur = { raw: [], fil: [], newStroke: true }; S.strokes.push(S.cur);
+  S.cur = { raw: [], fil: [], newStroke: true }; S.strokes.push(S.cur); $('emptyHint').hidden = true;
   S.speed.reset();
   S.recCur = S.mode === 'free' ? { samples: [] } : null;
   if (S.recCur) { S.rec.push(S.recCur); updateCompareBtn(); }
@@ -245,7 +246,7 @@ function beginTask() {
   $('stRating').hidden = true; $('stDone').hidden = true; $('btnDone').disabled = false; $('btnRedo').disabled = false;
   $('stProgress').textContent = `Condition ${st.ci + 1} of 4 - task ${st.si + 1} of ${st.reps * TASKS.length}`;
   $('stTask').textContent = `${st.task.toUpperCase()}: ${TASK_HELP[st.task]}`;
-  $('banner').textContent = `Condition ${st.ci + 1}/4 - ${st.task}`;
+  $('banner').textContent = `Condition ${st.ci + 1} of 4: ${st.task}`;
   $('stMetrics').textContent = st.lastMetrics || '';
   updateTemplate(); redraw();
 }
@@ -301,7 +302,7 @@ function finishTrial() {
     st.stage = 'rating'; S.strokes = []; S.cur = null; S.template = null; redraw();
     $('btnDone').disabled = true; $('btnRedo').disabled = true; $('stRating').hidden = false;
     $('ratingSl').value = 5; $('ratingO').textContent = '5';
-    $('stTask').textContent = ''; $('banner').textContent = `Condition ${st.ci + 1}/4 finished`;
+    $('stTask').textContent = ''; $('banner').textContent = `Condition ${st.ci + 1} of 4 finished`;
   } else beginTask();
 }
 $('ratingSl').addEventListener('input', (e) => { $('ratingO').textContent = e.target.value; });
@@ -340,8 +341,8 @@ const plot = new ImuPlot($('imuCanvas'));
 const slog = (s) => { const el = $('serialLog'); el.textContent = (el.textContent + s + '\n').split('\n').slice(-30).join('\n'); el.scrollTop = el.scrollHeight; };
 if (!serialSupported()) {
   $('btnConnect').disabled = true;
-  $('serialNote').textContent = 'Web Serial is not available here (use Chrome or Edge over http://localhost). The rest of the app works without it.';
-} else $('serialNote').textContent = 'Connect the Steady pen (921600 baud). Optional.';
+  $('serialNote').textContent = 'This browser cannot talk to the pen over USB. Use Chrome or Edge on a laptop or Chromebook (not an iPad). Everything else works without it.';
+} else $('serialNote').textContent = 'Optional test equipment: connect the tremor pen with a USB cable (hardware/README.md).';
 const meter = new PenMeter(25), truthRows = [];
 ser.onSample = (s) => { plot.add(s); meter.addSample(s); };
 ser.onCommand = (c) => meter.addCommand(c);
@@ -409,9 +410,10 @@ function updateReadouts() {
   $('roF0').textContent = haveF0 ? `${f0.toFixed(1)} Hz` : '-';
   $('roConf').textContent = conf.toFixed(2);
   $('confBar').style.width = `${Math.min(100, conf * 100)}%`;
-  $('roMode').textContent = !info ? S.filterName
-    : info.kind === 'v2' ? `steady: oscillator bank, tremor ${info.amp.toFixed(2)} mm`
-    : (info.fallback ? 'steady v1: fallback (low conf)' : 'steady v1: tremor model on');
+  const names = { raw: 'no filter', ema: 'moving average', one_euro: 'One-Euro' };
+  $('roMode').textContent = !info ? (names[S.filterName] || S.filterName)
+    : info.kind === 'v2' ? (info.amp >= 0.05 ? `measuring a ${info.amp.toFixed(2)} mm shake` : 'no shake measured yet')
+    : (info.fallback ? 'v1: unsure, light smoothing only' : 'v1: removing the shake');
   $('roLag').textContent = S.filterName === 'raw' ? '0 ms' : (S.lag.ok ? `${S.lag.ms.toFixed(0)} ms` : '-');
   $('roFs').textContent = S.fs ? `${S.fs.toFixed(0)} Hz` : '-';
   if (ser.connected) plot.draw();
