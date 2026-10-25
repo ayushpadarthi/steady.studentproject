@@ -582,9 +582,9 @@ export class SteadyV5 extends SteadyV3 {
 }
 
 /** Filters offered as study conditions (steady_v1 is deliberately absent). */
-export const FILTER_NAMES = ['raw', 'ema', 'one_euro', 'steady'];
+export const FILTER_NAMES = ['raw', 'ema', 'steady']; // the pilot user test's three versions (study.js CONDITIONS)
 /** Filters selectable in free play. */
-export const FREE_FILTER_NAMES = [...FILTER_NAMES, 'steady_v4', 'steady_v3', 'steady_v2', 'steady_v1'];
+export const FREE_FILTER_NAMES = ['raw', 'ema', 'one_euro', 'steady', 'steady_v4', 'steady_v3', 'steady_v2', 'steady_v1'];
 
 export function makeFilter(name, opts = {}) {
   switch (name) {

@@ -99,7 +99,7 @@ export async function runTests(loadFile = defaultLoader) {
     check('one_euro: finite on ramp', Number.isFinite(yy));
   }
   // --- filter lists and Filter2D / stroke semantics
-  check('study conditions exclude steady_v1; free play includes it', FILTER_NAMES.join() === 'raw,ema,one_euro,steady' && FREE_FILTER_NAMES.includes('steady_v1'));
+  check('study conditions = pilot (raw, ema, steady); free play includes one_euro and steady_v1', FILTER_NAMES.join() === 'raw,ema,steady' && FREE_FILTER_NAMES.includes('one_euro') && FREE_FILTER_NAMES.includes('steady_v1'));
   {
     const f2 = new Filter2D('steady');
     check('Filter2D(steady) = two independent SteadyV4 (= gated v2, v4 settings)', f2.fx instanceof SteadyV3 && f2.fy instanceof SteadyV3 && f2.fx !== f2.fy && new Filter2D('steady_v2').fx instanceof SteadyV2);

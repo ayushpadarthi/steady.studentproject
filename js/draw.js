@@ -1,12 +1,12 @@
 // Steady drawing app. Uses the SAME filter code as the lab (js/filters.js), so study results apply to it.
-import { Filter2D } from './filters.js?v=18';
-import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=18';
-import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=18';
-import { openReplay } from './replay.js?v=18';
-import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=18';
+import { Filter2D } from './filters.js?v=19';
+import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=19';
+import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=19';
+import { openReplay } from './replay.js?v=19';
+import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=19';
 // MM_PER_PX: the device's real size (js/calib.js); the filter's parameters are in millimetres
-import { MM_PER_PX, onCalibrationChange, openCalibration, calibrationLabel } from './calib.js?v=18';
-import { saveDrawing, loadDrawing } from './store.js?v=18';
+import { MM_PER_PX, onCalibrationChange, openCalibration, calibrationLabel } from './calib.js?v=19';
+import { saveDrawing, loadDrawing } from './store.js?v=19';
 
 const $ = (id) => document.getElementById(id);
 
@@ -36,7 +36,8 @@ const SHAKE_WIN = 2;   // seconds of trace on the "Your shake" card
 // ---------------------------------------------------------------- state
 const S = {
   steady: true, tool: 'brush', color: COLORS[0][1], size: 4,
-  syn: { on: false, preset: 'et_moderate' }, ghost: false, smooth: 'smooth', style: 'none', shakeCard: false,
+  syn: { on: false, preset: 'et_moderate' }, ghost: false, smooth: 'smooth', style: 'none', shakeCard: false, race: false,
+  raceStat: null,                      // lag race: {liveS, liveR, sumS, sumR, n, done} in mm (distance of each line from the pen)
   shake: [],                            // last 2 s of {t, dx, dy}: raw minus filtered position, mm (for the "Your shake" card)
   strokes: [], history: [], redo: [],   // history items: {kind:'stroke', stroke} | {kind:'clear', removed:[...]}
   cur: null, pointerId: null, sawPen: false, lastT: -Infinity,
@@ -49,20 +50,24 @@ load();
 const steadyF = new Filter2D('steady');
 // Shake style: the shake Steady separates out (input minus its zero-lag estimate) drives the brush.
 const shakeT = new ShakeTracker();
+// Lag race: a typical stabiliser (moving average, 2 Hz, the lab's 'ema'; ~75 ms behind the pen) fed the same input.
+const raceF = new Filter2D('ema');
+const RACE_COLOR = 'rgba(47,143,206,.6)';
+const s0Race = () => ({ liveS: 0, liveR: 0, sumS: 0, sumR: 0, n: 0, done: false });
 // Same speed-dependent tremor generator as the lab (one instance, continuous in time across strokes).
 // Seeded differently on every page load, so the demo shake is never the same twice.
 const tremorGen = makeTremor(S.syn.preset, {}, (Date.now() ^ Math.floor(Math.random() * 2 ** 31)) >>> 0), speedEst = new SpeedEstimator(0.08);
 
 // ---------------------------------------------------------------- canvases
-const ink = $('ink'), ghost = $('ghost');
-const ictx = ink.getContext('2d'), gctx = ghost.getContext('2d');
+const ink = $('ink'), ghost = $('ghost'), race = $('race');
+const ictx = ink.getContext('2d'), gctx = ghost.getContext('2d'), rctx = race.getContext('2d');
 // Off-screen base layer holding every finished, settled stroke. A settling animation frame then costs one
 // image copy plus the strokes still moving, instead of redrawing the whole picture (about 50 ms at 300 strokes).
 const base = document.createElement('canvas'), bctx = base.getContext('2d');
 function resize() {
   S.dpr = Math.min(window.devicePixelRatio || 1, 3);
   S.w = window.innerWidth; S.h = window.innerHeight;
-  for (const c of [ink, ghost, base]) {
+  for (const c of [ink, ghost, base, race]) {
     c.width = Math.round(S.w * S.dpr); c.height = Math.round(S.h * S.dpr);
     c.getContext('2d').setTransform(S.dpr, 0, 0, S.dpr, 0, 0);
   }
@@ -121,6 +126,14 @@ function drawStrokeTail(ctx, s, pts, i, ghostLine) {
   const w = ghostLine ? 1.25 : (pts[i - 1].w + pts[i].w) / 2;
   segment(ctx, i >= 2 ? pts[i - 2] : null, pts[i - 1], pts[i], color, w, erase);
 }
+// Lag race line for sample i of stroke s (brush: the stabiliser's line; eraser: erase it too).
+function raceTail(s, i) {
+  if (s.tool === 'eraser') { drawStrokeTail(rctx, s, s.pts, i, false); return; }
+  const P = s.race; if (!P || !P[i]) return;
+  if (i === 0) { dotAt(rctx, P[0], RACE_COLOR, P[0].w, false); return; }
+  segment(rctx, i >= 2 ? P[i - 2] : null, P[i - 1], P[i], RACE_COLOR, (P[i - 1].w + P[i].w) / 2, false);
+}
+function drawRace(s) { const n = s.tool === 'eraser' ? s.pts.length : (s.race ? s.race.length : 0); for (let i = 0; i < n; i++) raceTail(s, i); }
 function drawInk(ctx, s) { for (let i = 0; i < s.pts.length; i++) drawStrokeTail(ctx, s, s.pts, i, false); }
 function drawGhost(s) {
   if (s.tool === 'brush') for (let i = 0; i < s.raw.length; i++) drawStrokeTail(gctx, s, s.raw, i, true);
@@ -147,9 +160,10 @@ function redrawInk() {
 }
 // Full rebuild (undo, clear, resize, restore): the base layer and the raw line from scratch.
 function redrawAll() {
-  wipe(base); wipe(ghost); S.baseN = 0;
-  for (const s of S.strokes) drawGhost(s);
-  gctx.globalCompositeOperation = 'source-over';
+  wipe(base); wipe(ghost); wipe(race); S.baseN = 0;
+  for (const s of S.strokes) { drawGhost(s); if (S.race) drawRace(s); }
+  gctx.globalCompositeOperation = 'source-over'; rctx.globalCompositeOperation = 'source-over';
+  race.style.visibility = S.race ? 'visible' : 'hidden';
   redrawInk();
   ghost.style.visibility = S.ghost ? 'visible' : 'hidden';
 }
@@ -166,6 +180,7 @@ function ingest(ev) {
   S.lastT = t;
   const r = ink.getBoundingClientRect();
   let xm = (ev.clientX - r.left) * MM_PER_PX, ym = (ev.clientY - r.top) * MM_PER_PX;
+  const penX = xm, penY = ym;             // where the pen is (before any simulated tremor): the lag race measures from here
   const spd = speedEst.update(t, xm, ym); // speed of the intended (un-shaken) path, mm/s
   if (S.syn.on) { // demonstration only: same artificial tremor model as the lab
     const [dx, dy] = tremorGen.offset(t, spd);
@@ -182,6 +197,11 @@ function ingest(ev) {
   }
   const useF = S.steady && Number.isFinite(fx) && Number.isFinite(fy);
   const s = S.cur;
+  const [rx, ry] = raceF.step(t, xm, ym);
+  if (S.raceStat && Number.isFinite(rx) && Number.isFinite(ry)) {
+    const st = S.raceStat, dS = Math.hypot((useF ? fx : xm) - penX, (useF ? fy : ym) - penY), dR = Math.hypot(rx - penX, ry - penY);
+    st.liveS = dS; st.liveR = dR; st.sumS += dS; st.sumR += dR; st.n++;
+  }
   const wRaw = widthFor(ev, s.tool);
   s.wSm = s.wSm == null ? wRaw : s.wSm * 0.7 + wRaw * 0.3; // soften pressure jitter
   s.t.push(t);
@@ -189,10 +209,12 @@ function ingest(ev) {
   s.env.push(Number.isFinite(env) ? env : 0); s.mark.push(useF ? mark : 0);
   s.dsh.push(Number.isFinite(dsx) && Number.isFinite(dsy) ? { x: dsx / MM_PER_PX, y: dsy / MM_PER_PX } : { x: 0, y: 0 });
   s.raw.push({ x: xm / MM_PER_PX, y: ym / MM_PER_PX, w: s.wSm });
+  s.race.push({ x: (Number.isFinite(rx) ? rx : xm) / MM_PER_PX, y: (Number.isFinite(ry) ? ry : ym) / MM_PER_PX, w: s.wSm });
   s.pts.push({ x: (useF ? fx : xm) / MM_PER_PX, y: (useF ? fy : ym) / MM_PER_PX, w: s.wSm });
   drawStrokeTail(ictx, s, s.pts, s.pts.length - 1, false);
   if (s.tool === 'brush') drawStrokeTail(gctx, s, s.raw, s.raw.length - 1, true);
   else drawStrokeTail(gctx, s, s.pts, s.pts.length - 1, false);
+  if (S.race) raceTail(s, s.pts.length - 1);
 }
 
 ink.addEventListener('pointerdown', (e) => {
@@ -207,10 +229,12 @@ ink.addEventListener('pointerdown', (e) => {
   speedEst.reset();
   steadyF.startStroke();                                   // keeps the learned tremor, restarts the line
   shakeT.startStroke();
+  raceF.startStroke();                                     // a stabiliser starts fresh at every pen-down
+  S.raceStat = s0Race();
   // the eraser end of a stylus (or its eraser button) erases, whatever tool is selected
   const tool = e.pointerType === 'pen' && (e.button === 5 || (e.buttons & 32)) ? 'eraser' : S.tool;
   S.cur = { tool, color: S.color, steady: S.steady, style: tool === 'brush' && S.steady ? S.style : 'none',
-    pts: [], raw: [], live: [], t: [], env: [], mark: [], dsh: [], wSm: null };
+    pts: [], raw: [], live: [], race: [], t: [], env: [], mark: [], dsh: [], wSm: null };
   S.strokes.push(S.cur);
   S.lastT = -Infinity;
   document.body.classList.add('drawing');
@@ -226,6 +250,7 @@ function endStroke(e) {
   S.pointerId = null;
   document.body.classList.remove('drawing');
   const s = S.cur; S.cur = null;
+  if (S.raceStat) S.raceStat.done = true;
   if (s && s.pts.length) { S.history.push({ kind: 'stroke', stroke: s }); S.redo = []; settleStroke(s); }
   else if (s) S.strokes.pop();
   bake(); syncButtons(); saveSoon();
@@ -344,6 +369,7 @@ function syncButtons() {
   for (const b of document.querySelectorAll('.size')) b.setAttribute('aria-pressed', String(+b.dataset.s === S.size));
   $('synOn').setAttribute('aria-checked', String(S.syn.on)); $('ghostOn').setAttribute('aria-checked', String(S.ghost));
   $('shakeOn').setAttribute('aria-checked', String(S.shakeCard)); $('shakeCard').hidden = !S.shakeCard;
+  $('raceOn').setAttribute('aria-checked', String(S.race)); $('raceCard').hidden = !S.race; $('raceSwatch').style.background = S.color;
   $('saveBA').disabled = !S.strokes.length;
   for (const b of document.querySelectorAll('#presetList .preset')) b.setAttribute('aria-pressed', String(b.dataset.k === S.syn.preset));
   for (const b of document.querySelectorAll('.smooth-opt')) b.setAttribute('aria-pressed', String(b.dataset.k === S.smooth));
@@ -430,7 +456,12 @@ for (const [k, name, note] of DEMO_PRESETS) {
 $('replayBtn').onclick = replayLast;
 $('synOn').onclick = () => { S.syn.on = !S.syn.on; syncButtons(); };
 $('ghostOn').onclick = () => { S.ghost = !S.ghost; syncButtons(); };
-$('shakeOn').onclick = () => { S.shakeCard = !S.shakeCard; syncButtons(); updateShakeCard(); };
+$('shakeOn').onclick = () => { S.shakeCard = !S.shakeCard; if (S.shakeCard) S.race = false; syncButtons(); redrawAll(); updateShakeCard(); };
+$('raceOn').onclick = () => {
+  S.race = !S.race; if (S.race) S.shakeCard = false;   // both cards use the same spot
+  syncButtons(); redrawAll(); updateRaceCard();
+  if (S.race && !S.syn.on) flash('Tip: turn on Simulate tremor to see the difference');
+};
 $('saveBA').onclick = saveBeforeAfter;
 $('calBtn').onclick = () => { closePops(); openCalibration(); };
 const calSync = () => { $('calNote').textContent = calibrationLabel(); };
@@ -505,7 +536,21 @@ function updateShakeCard() {
     tctx.stroke();
   }
 }
-setInterval(() => { if (!document.hidden) updateShakeCard(); }, 100);
+setInterval(() => { if (!document.hidden) { updateShakeCard(); updateRaceCard(); } }, 100);
+
+// Lag race card: how far each line is from the pen, now (while drawing) or on average (last stroke).
+function updateRaceCard() {
+  if (!S.race) return;
+  const st = S.raceStat, mm = (v) => `${v < 10 ? v.toFixed(1) : Math.round(v)} mm`;
+  if (!st || !st.n) { $('raceS').textContent = $('raceR').textContent = '\u2013'; return; }
+  if (st.done) {
+    $('raceS').textContent = `${mm(st.sumS / st.n)} avg`; $('raceR').textContent = `${mm(st.sumR / st.n)} avg`;
+    $('raceCap').textContent = 'Last stroke: average distance of each line from your pen.';
+  } else {
+    $('raceS').textContent = `${mm(st.liveS)} behind`; $('raceR').textContent = `${mm(st.liveR)} behind`;
+    $('raceCap').textContent = 'Right now: distance of each line from your pen.';
+  }
+}
 
 // ---------------------------------------------------------------- the drawing itself (this device only, js/store.js)
 // Saved a moment after every change and when the page is hidden, so a refresh or an accidental back-swipe
@@ -530,7 +575,7 @@ function restoreDrawing() {
 
 // ---------------------------------------------------------------- preferences (per device)
 function persist() {
-  try { localStorage.setItem('steady.draw.prefs', JSON.stringify({ steady: S.steady, color: S.color, size: S.size, syn: { preset: S.syn.preset }, ghost: S.ghost, smooth: S.smooth, style: S.style, shakeCard: S.shakeCard })); } catch {}
+  try { localStorage.setItem('steady.draw.prefs', JSON.stringify({ steady: S.steady, color: S.color, size: S.size, syn: { preset: S.syn.preset }, ghost: S.ghost, smooth: S.smooth, style: S.style, shakeCard: S.shakeCard, race: S.race })); } catch {}
 }
 function load() {
   try {
@@ -541,6 +586,7 @@ function load() {
     if (SIZES.includes(p.size)) S.size = p.size;
     if (typeof p.ghost === 'boolean') S.ghost = p.ghost;
     if (typeof p.shakeCard === 'boolean') S.shakeCard = p.shakeCard;
+    if (typeof p.race === 'boolean') S.race = p.race && !S.shakeCard;
     if (SMOOTH.some(([k]) => k === p.smooth)) S.smooth = p.smooth;
     if (STYLES.some(([k]) => k === p.style)) S.style = p.style;
     if (p.syn && DEMO_PRESETS.some(([k]) => k === p.syn.preset)) S.syn.preset = p.syn.preset;

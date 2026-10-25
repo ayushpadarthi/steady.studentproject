@@ -1,25 +1,30 @@
 // Study-mode helpers: counterbalancing and CSV builders (format per docs/04-architecture-spec.md).
 
-export const CONDITIONS = ['raw', 'ema', 'one_euro', 'steady'];
+// Pilot user test (2026-10-24): three versions, so each session stays short. raw = no filter, ema = a typical
+// stabiliser (moving average, 2 Hz, ~75 ms behind the pen), steady = Steady.
+export const CONDITIONS = ['raw', 'ema', 'steady'];
 
-// Williams (balanced) 4x4 Latin square: each condition appears once per row and column and
-// follows every other condition equally often (first-order carry-over balanced).
+// Williams design for 3 conditions (odd number, so two mirrored Latin squares = all 6 orders): each version is in
+// each position twice and follows every other version equally often. Participants 1-6 get one order each;
+// with 8 people, 7 and 8 repeat orders 1 and 2.
 export const LATIN_SQUARE = [
-  [0, 1, 3, 2],
-  [1, 2, 0, 3],
-  [2, 3, 1, 0],
-  [3, 0, 2, 1],
+  [0, 1, 2],
+  [1, 2, 0],
+  [2, 0, 1],
+  [2, 1, 0],
+  [0, 2, 1],
+  [1, 0, 2],
 ];
 
 export function sanitizeId(s) { return String(s || '').trim().replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 40); }
 
-/** Row index from participant ID: trailing number (P07 -> row 6 mod 4) else a string hash. */
+/** Row index from participant ID: trailing number (P07 -> row 7 -> index 0) else a string hash. */
 export function rowForParticipant(id) {
   const m = /(\d+)\s*$/.exec(id);
-  if (m) return (parseInt(m[1], 10) - 1 + 4000000) % 4;
+  if (m) return (parseInt(m[1], 10) - 1 + 6000000) % LATIN_SQUARE.length;
   let h = 0;
   for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return h % 4;
+  return h % LATIN_SQUARE.length;
 }
 export const orderForRow = (row) => LATIN_SQUARE[row].map((i) => CONDITIONS[i]);
 

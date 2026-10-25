@@ -8,7 +8,7 @@
 // 2nd-order Butterworth low-pass at HP_HZ run forwards and backwards, js/settle.js), peak size = sqrt(2) x RMS,
 // frequency = upward crossings with hysteresis (same idea as js/shakestyle.js). Leak from slow motion at 4 Hz is
 // about 2 %; tremor below ~3 Hz is partly removed.
-import { zeroPhase } from './settle.js?v=18';
+import { zeroPhase } from './settle.js?v=19';
 export const WINDOW_S = 2.5, HP_HZ = 1.5;
 
 function movingAvgRemove(t, v) {   // name kept: = high-pass. Assumes roughly even sampling (the pen's are).

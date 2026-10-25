@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#1f6b4e">
 <title>Steady Lab</title>
-<link rel="stylesheet" href="css/style.css?v=18">
+<link rel="stylesheet" href="css/style.css?v=19">
 </head>
 <body>
 <header>
@@ -77,9 +77,12 @@
     <section id="secStudy" hidden>
       <h2>Study</h2>
       <div id="studySetup">
+        <p class="hint">Pilot user test: three versions in a balanced order (no filter, a typical stabiliser, Steady), the
+          participant is not told which is which. Turn on simulated tremor with the same preset for everyone, and set real
+          size first. <b>Only with an approved plan.</b></p>
         <label>Participant ID <input type="text" id="pid" maxlength="40" placeholder="e.g. P01" autocomplete="off"></label>
         <label>Latin-square row
-          <select id="rowSel"><option value="auto">auto (from ID)</option><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+          <select id="rowSel"><option value="auto">auto (from ID)</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
         <label>Repetitions per task <input type="number" id="reps" min="1" max="5" value="1"></label>
         <label class="chk"><input type="checkbox" id="autoDl" checked> auto-download CSV after each trial</label>
         <label class="chk"><input type="checkbox" id="studyRaw"> show raw trace to participant</label>
@@ -139,8 +142,8 @@
     <canvas id="draw"></canvas>
   </section>
 </main>
-<script type="module" src="js/main.js?v=18"></script>
+<script type="module" src="js/main.js?v=19"></script>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
-<script type="module" src="js/sitemenu.js?v=18"></script>
+<script type="module" src="js/sitemenu.js?v=19"></script>
 </body>
 </html>

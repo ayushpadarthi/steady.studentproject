@@ -1,12 +1,12 @@
 // Steady app: drawing canvas, live filters, synthetic tremor, study mode, optional serial.
-import { Filter2D, TremorTracker } from './filters.js?v=18';
-import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=18';
-import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=18';
-import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=18';
-import { PenMeter } from './penmeter.js?v=18';
-import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=18';
-import { openCompare } from './compare.js?v=18';
-import { MM_PER_PX, calibration, setMmPerPx, onCalibrationChange, openCalibration } from './calib.js?v=18';
+import { Filter2D, TremorTracker } from './filters.js?v=19';
+import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=19';
+import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=19';
+import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=19';
+import { PenMeter } from './penmeter.js?v=19';
+import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=19';
+import { openCompare } from './compare.js?v=19';
+import { MM_PER_PX, calibration, setMmPerPx, onCalibrationChange, openCalibration } from './calib.js?v=19';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('draw'), ctx = canvas.getContext('2d');
@@ -239,9 +239,9 @@ function beginTask() {
   S.strokes = []; S.cur = null;
   S.trial = { samples: [], strokeStartsMs: [], t0: null };
   $('stRating').hidden = true; $('stDone').hidden = true; $('btnDone').disabled = false; $('btnRedo').disabled = false;
-  $('stProgress').textContent = `Condition ${st.ci + 1} of 4 - task ${st.si + 1} of ${st.reps * TASKS.length}`;
+  $('stProgress').textContent = `Condition ${st.ci + 1} of ${st.order.length} - task ${st.si + 1} of ${st.reps * TASKS.length}`;
   $('stTask').textContent = `${st.task.toUpperCase()}: ${TASK_HELP[st.task]}`;
-  $('banner').textContent = `Condition ${st.ci + 1} of 4: ${st.task}`;
+  $('banner').textContent = `Condition ${st.ci + 1} of ${st.order.length}: ${st.task}`;
   $('stMetrics').textContent = st.lastMetrics || '';
   updateTemplate(); redraw();
 }
@@ -297,7 +297,7 @@ function finishTrial() {
     st.stage = 'rating'; S.strokes = []; S.cur = null; S.template = null; redraw();
     $('btnDone').disabled = true; $('btnRedo').disabled = true; $('stRating').hidden = false;
     $('ratingSl').value = 5; $('ratingO').textContent = '5';
-    $('stTask').textContent = ''; $('banner').textContent = `Condition ${st.ci + 1} of 4 finished`;
+    $('stTask').textContent = ''; $('banner').textContent = `Condition ${st.ci + 1} of ${st.order.length} finished`;
   } else beginTask();
 }
 $('ratingSl').addEventListener('input', (e) => { $('ratingO').textContent = e.target.value; });
@@ -312,7 +312,7 @@ $('btnRate').addEventListener('click', () => {
   });
   st.condTrials = []; st.ci++; st.si = 0; st.lastMetrics = '';
   $('stRating').hidden = true;
-  if (st.ci >= 4) {
+  if (st.ci >= st.order.length) {
     st.stage = 'done'; $('stDone').hidden = false; $('banner').textContent = 'Study complete';
     $('stProgress').textContent = 'All conditions done'; $('stMetrics').textContent = '';
     if ($('autoDl').checked) download(`summary_${st.pid}.csv`, summaryCsv(st.summary));

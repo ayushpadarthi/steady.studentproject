@@ -32,6 +32,8 @@ All pages use the **same** `js/filters.js`, so study results apply to the drawin
   - simulated tremor presets (never restored as "on");
   - raw line in grey;
   - a "Your shake" card;
+  - **Lag race**: a typical stabiliser's line (moving average, 2 Hz) drawn in blue from the same input, with a card
+    showing how far each line is from the pen (live while drawing, average after);
   - slow-motion replay;
   - a before/after picture;
   - "Set real size (match a card)";
@@ -73,7 +75,7 @@ screen), used live by every page; without it the standard 96 px/in guess is used
 
 ## Releases
 Pages load files as `?v=N` so browsers never mix old and new code (GitHub Pages caches for 10 minutes). **Bump N in
-every `.html` and every `import` line, and `VERSION` in `sw.js`, when publishing** (currently 18). If you add a file,
+every `.html` and every `import` line, and `VERSION` in `sw.js`, when publishing** (currently 19). If you add a file,
 add it to the list in `sw.js` too.
 
 ## Filters (`js/filters.js`)
@@ -105,9 +107,9 @@ changes, a new study session starts, or a new study condition starts.
 | `js/serial.js`, `js/penmeter.js` | Tremor-pen link over USB; truth meter (frequency and tip size from the pen's gyro and from its commanded movement) |
 | `js/tasks.js`, `js/study.js` | Spiral/line/square templates and metrics; Latin square and CSV writers |
 
-## Study mode (lab)
-1. Switch to **Study** and enter a participant ID (letters, digits, - and _ only; no other personal data). The Latin-square row comes from the ID.
-2. Conditions run in a Williams-balanced 4×4 Latin square over raw / ema / one_euro / steady. The participant only sees "Condition k of 4".
+## Study mode (lab): the pilot user test
+1. Switch to **Study** and enter a participant ID (letters, digits, - and _ only; no other personal data). The order row comes from the ID.
+2. Three versions (raw = no filter, ema = a typical stabiliser, steady) in a balanced Williams design (6 orders; each version in each position twice, every version follows every other equally often). With 8 participants, P07 and P08 repeat orders 1 and 2. The participant only sees "Condition k of 3". Turn on simulated tremor with the same preset for everyone.
 3. Each condition has four tasks: spiral, then line, then square, then free drawing. After each one, press **Done** (or **Redo**). Each trial downloads `trial_<participant>_<condition>_<task>_<n>.csv`.
 4. After each condition, the participant rates "How much control did you have?" from 0 to 10. This goes into `summary_<participant>.csv`.
 5. **Only with an approved protocol.** Calibrate mm first and keep browser zoom at 100 %.

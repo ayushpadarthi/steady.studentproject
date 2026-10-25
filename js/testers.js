@@ -1,6 +1,6 @@
 // Tester checklist: steps grouped by page, each marked Works / Problem / Skip with an optional note.
 // Saved in localStorage on this device; the report (text) includes device facts so bugs can be reproduced.
-import { calibration } from './calib.js?v=18';
+import { calibration } from './calib.js?v=19';
 
 const KEY = 'steady.testers.v1';
 const GROUPS = [
@@ -21,6 +21,7 @@ const GROUPS = [
     ['lag', 'No lag feeling', 'Draw fast loops with Steady on. Does the line keep up with the pen?'],
     ['settle', 'Settling', 'Line button → Smoothing: Smooth, then Extra. Does each stroke smooth a little when you lift the pen, without changing its shape?'],
     ['zigzag', 'Deliberate zigzag kept', 'Turn the simulated tremor off. Draw a big, fast zigzag. Does the line keep the zigzag, and does the top line say "Slow, big wiggle: keeping it as drawing"?'],
+    ['race', 'Lag race', 'Demo → Simulate tremor on, then Lag race on. Draw a fast spiral. Does a blue line trail behind your pen, and does the card show Steady much closer to the pen than the stabiliser?'],
     ['replay', 'Replay and before/after', 'Press R (or Demo → Replay). Then Demo → Save before/after picture. Do both work?'],
     ['healthy', 'Normal hand', 'Turn the simulated tremor off and write your name normally with Steady on and off. Does Steady ever make it look worse?'],
   ]],

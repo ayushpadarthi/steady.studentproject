@@ -191,3 +191,10 @@ button.tool.wide span { white-space: nowrap; }
 a.mark { color: inherit; text-decoration: none; }
 a.mark:hover { text-decoration: underline; }
 .tag { font-size: 11px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; }
+
+/* Lag race: a typical stabiliser's line (moving average) drawn from the same input, under the Steady line */
+#race { pointer-events: none; }
+.race-key { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; }
+.race-key .key-item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.race-key .sw { display: inline-block; width: 14px; height: 6px; border-radius: 3px; }
+.race-key .sw-stab { background: rgba(47,143,206,.6); }

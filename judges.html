@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#1f6b4e">
 <title>Steady for judges</title>
-<link rel="stylesheet" href="css/info.css?v=18">
+<link rel="stylesheet" href="css/info.css?v=19">
 </head>
 <body>
 <header class="bar"><div class="bar-in">
@@ -40,6 +40,9 @@
     <li>Open <a href="draw.html">Draw</a>. Press <b>Demo</b>, turn on <b>Simulate tremor</b> and pick <b>ET moderate</b>.</li>
     <li>Turn on <b>Show the raw, shaky line</b>. Draw a spiral or write your name. Grey is what your hand plus the
       tremor did; colour is what Steady drew. The top line says what Steady detected, for example "Removing a 6.4 Hz shake".</li>
+    <li>In Demo, turn on <b>Lag race</b> and draw a fast spiral. A blue line shows what a typical stabiliser (a moving
+      average) would draw from the same input: just as smooth, but trailing behind your pen. The card shows how far each
+      line is from the pen, for example "Steady 3 mm, stabiliser 12 mm".</li>
     <li>Switch <b>Steady</b> off in the bottom bar and draw again to see the raw line.</li>
     <li>Press <b>R</b> (or "Replay last stroke in slow motion" in Demo) to watch a stroke again slowly.</li>
     <li>Open the <a href="lab.html">Lab</a>, draw with simulated tremor, then <b>Compare filters on this drawing</b>:
@@ -216,6 +219,6 @@
 </main>
 <footer>A student science fair project. Not a medical device. Nothing you draw leaves your device.</footer>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
-<script type="module" src="js/sitemenu.js?v=18"></script>
+<script type="module" src="js/sitemenu.js?v=19"></script>
 </body>
 </html>
