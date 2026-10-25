@@ -10,12 +10,12 @@
 //                 only when the shake is clear (size >= 0.2 mm, >= 8 cycles, >= half of them within 25 % of the
 //                 median, and its energy concentrated near one frequency). Independent of Steady, so it is the same with Steady on or off (since 2026-10-25).
 //   off spiral  = mean |radial distance| to the guide spiral (js/tasks.js), for the raw hand and for Steady's line.
-import { createPad, MM_PER_PX } from './pad.js?v=22';
-import { $, wireCommon, download, fitCanvas } from './pagekit.js?v=22';
-import { makeTemplate, spiralRadialErrors, errStats } from './tasks.js?v=22';
-import { settle } from './settle.js?v=22';
-import { shakePeriods, shakeSpectrum, frequencyFromPeriods } from './shakefreq.js?v=22';
-import { calibration, onCalibrationChange, openCalibration, promptCalibrationIfNeeded } from './calib.js?v=22';
+import { createPad, MM_PER_PX } from './pad.js?v=23';
+import { $, wireCommon, download, fitCanvas } from './pagekit.js?v=23';
+import { makeTemplate, spiralRadialErrors, errStats } from './tasks.js?v=23';
+import { settle } from './settle.js?v=23';
+import { shakePeriods, shakeSpectrum, frequencyFromPeriods } from './shakefreq.js?v=23';
+import { calibration, onCalibrationChange, openCalibration, promptCalibrationIfNeeded } from './calib.js?v=23';
 
 const KEY = 'steady.checkin.log';
 const guide = $('guide');

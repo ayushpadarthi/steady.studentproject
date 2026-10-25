@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#1f6b4e">
 <title>Steady for judges</title>
-<link rel="stylesheet" href="css/info.css?v=22">
+<link rel="stylesheet" href="css/info.css?v=23">
 </head>
 <body>
 <header class="bar"><div class="bar-in">
@@ -77,8 +77,10 @@
       drawings showed that the ungated filter did nothing useful. Honest note: v6 reads a healthy hand's tiny tremor as a
       little bigger, so for a healthy hand the gate is partly on (about a quarter on average in our tests). That does
       not make healthy drawing worse (0.08 mm vs 0.10 mm with no filter).</p>
-    <p><b>Drawing check (v5).</b> A rhythm that is slow (under about 4 Hz) and big (over about 1 mm) is far more likely a
-      zigzag you mean to draw than tremor, so Steady leaves it alone.</p>
+    <p><b>Drawing check (v5) and size limit (v7).</b> A rhythm that is slow (under about 4 Hz) and big (over about 1 mm)
+      is far more likely a zigzag you mean to draw than tremor, so Steady leaves it alone. So is any rhythm far bigger
+      than tremor gets while drawing (detected size above about 16 mm), whatever its speed, which keeps big colouring
+      scribbles.</p>
     <p><b>Settling.</b> While you draw, Steady cannot see the future, so it must stay fast. After pen-up the whole
       stroke is known, and a zero-phase filter (run forwards and backwards) smooths it without delay. Its strength
       follows the tremor Steady measured, and points may move at most about twice the tremor size, so real shapes keep
@@ -90,7 +92,7 @@
     <b>final test on fresh data</b>: 40 new simulated sessions per kind of tremor, planned and written down before it
     ran, run once, nothing changed afterwards. "Error" = average distance in mm between the drawn line and the line the
     hand meant to draw; ± is a 95 % range.</p>
-  <h3>Design criteria (final test, current version v6)</h3>
+  <h3>Design criteria (final test; current version v7 gives the same numbers, see below)</h3>
   <div class="table"><table>
     <thead><tr><th>Criterion (set in advance)</th><th>Target</th><th>Steady</th><th>Pass</th></tr></thead>
     <tbody>
@@ -149,6 +151,27 @@
     while drawing than v5, but a slightly less smooth final line (74 % instead of 78 % removed), because its after-pen-up
     smoothing must switch on later to leave healthy hands alone.</p>
 
+  <h3>Colouring in (the v7 fix) and its limit</h3>
+  <p>Colouring in means fast back-and-forth strokes, often 4-6 per second: exactly the speed of tremor. v6 erased big
+    scribbles like that. v7 adds a size limit: real tremor while drawing is rarely bigger than about 1.5 cm (in a
+    clinical study, even a spiral rated 3 out of 4 had about 3.4 cm peak-to-peak; Elble and Ellenbogen, 2017), so
+    anything bigger is treated as drawing. Chosen on training data with severe tremor protected, then checked once on the
+    final-test data (disclosed):</p>
+  <div class="table"><table>
+    <thead><tr><th>Final-test data</th><th class="n">v6</th><th class="n">v7</th></tr></thead>
+    <tbody>
+      <tr><td>Big colouring scribbles (2-5 cm, 4.5-5.5 per second): error while drawing</td><td class="n">11.9 mm</td><td class="n"><b>5.9 mm</b></td></tr>
+      <tr><td>Same, final line</td><td class="n">13.6 mm</td><td class="n"><b>7.3 mm</b></td></tr>
+      <tr><td>Moderate essential tremor, while drawing (both tremor models)</td><td class="n">0.80 / 0.96 mm</td><td class="n">0.80 / 0.96 mm</td></tr>
+      <tr><td>Severe essential tremor, while drawing (cost, disclosed)</td><td class="n">2.25 mm</td><td class="n">2.28 mm (+1.4 %)</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>The limit we cannot fix:</b> small, fast colouring strokes (about 0.5-1.5 cm at 4-6 per second) look exactly like
+    moderate-to-severe tremor. No method that only sees the pen's position can tell them apart; a moving average erases
+    them just as much. <b>Our proposed next design:</b> use <i>your</i> tremor size. The spiral check-in already measures
+    how big your shake is; Steady could then only remove wiggles up to about twice that size. Someone with a 3 mm tremor
+    would keep a 1 cm colouring stroke. Not built or tested yet.</p>
+
   <h3>Deliberate zigzags (the v5 fix)</h3>
   <p>Testing our own app, we found that a fast zigzag drawn on purpose was partly erased as if it were tremor.
     The drawing check fixed it without losing tremor removal:</p>
@@ -178,6 +201,7 @@
       <tr><td>v4</td><td>Retuned on realistic tremor</td><td>Our tremor simulator was too regular compared with real drawings; on the realistic one v3 missed the 50 % goal (48 %)</td></tr>
       <tr><td>v5</td><td>Drawing check</td><td>Deliberate zigzags were being erased</td></tr>
       <tr><td>v6</td><td>Follows changing tremor faster; after-pen-up smoothing re-set</td><td>Published data showed real essential tremor changes rhythm more than our simulator; on it, v5 dropped to 49 %</td></tr>
+      <tr><td>v7</td><td>Size limit: anything too big to be tremor is kept as drawing</td><td>Fast colouring scribbles (faster than 4 per second) were erased, because they move at tremor speed</td></tr>
     </tbody>
   </table></div>
   <p><b>Ideas we tested and rejected:</b> filtering along the tremor's direction (healthy hands got worse); a warm-up
@@ -242,8 +266,8 @@
       in how they smooth.</li>
     <li>No testing with people yet. That needs approval from our school's review committee first
       (<a href="participants.html">what a session would involve</a>).</li>
-    <li>A small, fast wiggle drawn on purpose (faster than about 4 times a second, under 1 mm) cannot be told apart from
-      tremor by position alone. Very sharp, slow zigzags can lose about 1 mm at the corners in the final line.</li>
+    <li>A small, fast wiggle drawn on purpose (faster than about 4 times a second and smaller than about 1.5 cm, like
+      careful colouring in) cannot be told apart from tremor by position alone (see "Colouring in" above). Very sharp, slow zigzags can lose about 1 mm at the corners in the final line.</li>
     <li>The tremor pen, a servo that shakes a stylus repeatably and measures the shake with its own motion sensor, is
       designed and its software tested on a computer. It is not built yet.</li>
     <li>Steady is not a medical device and does not treat tremor. It changes what appears on screen.</li>
@@ -271,6 +295,6 @@
 </main>
 <footer>A student science fair project. Not a medical device. Nothing you draw leaves your device.</footer>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
-<script type="module" src="js/sitemenu.js?v=22"></script>
+<script type="module" src="js/sitemenu.js?v=23"></script>
 </body>
 </html>

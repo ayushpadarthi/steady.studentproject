@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#1f6b4e">
 <title>Steady Lab</title>
-<link rel="stylesheet" href="css/style.css?v=22">
+<link rel="stylesheet" href="css/style.css?v=23">
 </head>
 <body>
 <header>
@@ -28,7 +28,8 @@
           <option value="raw">No filter (raw)</option>
           <option value="ema">Moving average (EMA, 2 Hz)</option>
           <option value="one_euro">One-Euro filter</option>
-          <option value="steady" selected>Steady (current, v6)</option>
+          <option value="steady" selected>Steady (current, v7)</option>
+          <option value="steady_v6">Steady v6 (no size limit)</option>
           <option value="steady_v5">Steady v5 (before the variable-tremor settings)</option>
           <option value="steady_v4">Steady v4 (no drawing check)</option>
           <option value="steady_v3">Steady v3 (older settings)</option>
@@ -144,8 +145,8 @@
     <canvas id="draw"></canvas>
   </section>
 </main>
-<script type="module" src="js/main.js?v=22"></script>
+<script type="module" src="js/main.js?v=23"></script>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
-<script type="module" src="js/sitemenu.js?v=22"></script>
+<script type="module" src="js/sitemenu.js?v=23"></script>
 </body>
 </html>

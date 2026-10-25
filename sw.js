@@ -2,7 +2,7 @@
 // app keeps working with bad or no Wi-Fi (for example at the fair). Network first, so updates arrive as soon as
 // there is a connection; the stored copy is used when the network fails or takes longer than 3 s.
 // VERSION must match the ?v=N used by the pages (bump both when publishing).
-const VERSION = 22;
+const VERSION = 23;
 const CACHE = `steady-v${VERSION}`;
 const q = `?v=${VERSION}`;
 const FILES = [

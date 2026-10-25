@@ -4,9 +4,9 @@
 //   Colour: fill a shape. Score = share of your ink inside the outline; Filled = share of the shape covered.
 // Every score is computed twice: for the line on screen and for the raw hand (what it would have been without Steady).
 // Masks are rasterised at half resolution; good enough for whole percentages.
-import { createPad, MM_PER_PX } from './pad.js?v=22';
-import { onCalibrationChange, promptCalibrationIfNeeded } from './calib.js?v=22';
-import { $, wireCommon, fitCanvas } from './pagekit.js?v=22';
+import { createPad, MM_PER_PX } from './pad.js?v=23';
+import { onCalibrationChange, promptCalibrationIfNeeded } from './calib.js?v=23';
+import { $, wireCommon, fitCanvas } from './pagekit.js?v=23';
 
 const LANE_MM = 5, TRACE_W = 4, COLOUR_W = 18, MS = 0.5; // mask scale
 const PAINTS = [['Viridian', '#1f7a5a'], ['Ultramarine', '#2b4cc4'], ['Ochre', '#d39b2a'], ['Vermilion', '#e0472b'], ['Violet', '#6a3d9a']];

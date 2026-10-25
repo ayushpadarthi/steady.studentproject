@@ -522,10 +522,10 @@ export class SteadyV2 {
  * back to plain light smoothing; with real rhythmic tremor it cancels it (see docs/history/07-review-and-research.md).
  */
 export class SteadyV3 {
-  constructor({ gate_lo = 0.1, gate_hi = 0.3, tau_g = 0.3, fin_fc = 10.0, draw_fc = 0, draw_fw = 0.5, draw_ac = 1.0, draw_aw = 2.0, v2 = {}, ...rest } = {}) {
+  constructor({ gate_lo = 0.1, gate_hi = 0.3, tau_g = 0.3, fin_fc = 10.0, draw_fc = 0, draw_fw = 0.5, draw_ac = 1.0, draw_aw = 2.0, big_ac = 0, big_aw = 4.0, v2 = {}, ...rest } = {}) {
     this.inner = new SteadyV2({ ...v2, ...rest });
     this.gate_lo = gate_lo; this.gate_hi = gate_hi; this.tau_g = tau_g;
-    Object.assign(this, { draw_fc, draw_fw, draw_ac, draw_aw });
+    Object.assign(this, { draw_fc, draw_fw, draw_ac, draw_aw, big_ac, big_aw });
     this.fin = new EMAFilter({ fc: fin_fc });
     this.freqs = this.inner.freqs;
     this.reset();
@@ -535,13 +535,19 @@ export class SteadyV3 {
   start_stroke() { this.startStroke(); }
   /** Drawing check (v5; off when draw_fc <= 0): 0..1, how much the detected rhythm looks like deliberate drawing.
    *  A slow, big rhythm (under ~4 Hz, over ~1 mm) is far more likely a zigzag or wave than tremor. */
+  //  Size limit (v7; off when big_ac <= 0): a rhythm bigger than real tremor gets while drawing is drawing at any speed.
   intent() {
-    if (this.draw_fc <= 0) return 0;
+    if (this.draw_fc <= 0 && this.big_ac <= 0) return 0;
     const hz = this.inner.tremor_hz(), amp = this.inner.tremor_amp_mm();
-    if (!(Number.isFinite(hz) && Number.isFinite(amp))) return 0;
-    const slow = Math.min(1, Math.max(0, (this.draw_fc - hz) / this.draw_fw + 0.5));
-    const big = Math.min(1, Math.max(0, (amp - this.draw_ac) / this.draw_aw + 0.5));
-    return slow * big;
+    if (!Number.isFinite(amp)) return 0;
+    let it = 0;
+    if (this.draw_fc > 0 && Number.isFinite(hz)) {
+      const slow = Math.min(1, Math.max(0, (this.draw_fc - hz) / this.draw_fw + 0.5));
+      const big = Math.min(1, Math.max(0, (amp - this.draw_ac) / this.draw_aw + 0.5));
+      it = slow * big;
+    }
+    if (this.big_ac > 0) it = Math.max(it, Math.min(1, Math.max(0, (amp - this.big_ac) / this.big_aw + 0.5)));
+    return it;
   }
   _gateTarget() {
     if (this.gate_lo < 0) return 1;
@@ -586,18 +592,25 @@ export const V6_PARAMS = { ...V5_PARAMS, act_gain: 0.06, act_cap: 6.0, tau_w: 0.
 export class SteadyV6 extends SteadyV3 {
   constructor(opts = {}) { super({ ...V6_PARAMS, ...opts }); }
 }
+/** Steady v7 (2026-10-25) = v6 + size limit (a rhythm bigger than ~16 mm detected is drawing at any speed, so big
+ *  colouring scribbles are kept). V7_PARAMS in filters.py; parity vs shared/test_vectors/steady_v7_kalman.json. */
+export const V7_PARAMS = { ...V6_PARAMS, big_ac: 16.0, big_aw: 2.0 };
+export class SteadyV7 extends SteadyV3 {
+  constructor(opts = {}) { super({ ...V7_PARAMS, ...opts }); }
+}
 
 /** Filters offered as study conditions (steady_v1 is deliberately absent). */
 export const FILTER_NAMES = ['raw', 'ema', 'steady']; // the pilot user test's three versions (study.js CONDITIONS)
 /** Filters selectable in free play. */
-export const FREE_FILTER_NAMES = ['raw', 'ema', 'one_euro', 'steady', 'steady_v5', 'steady_v4', 'steady_v3', 'steady_v2', 'steady_v1'];
+export const FREE_FILTER_NAMES = ['raw', 'ema', 'one_euro', 'steady', 'steady_v6', 'steady_v5', 'steady_v4', 'steady_v3', 'steady_v2', 'steady_v1'];
 
 export function makeFilter(name, opts = {}) {
   switch (name) {
     case 'raw': return new RawFilter();
     case 'ema': return new EMAFilter(opts);
     case 'one_euro': return new OneEuroFilter(opts);
-    case 'steady': return new SteadyV6(opts);
+    case 'steady': return new SteadyV7(opts);
+    case 'steady_v6': return new SteadyV6(opts);
     case 'steady_v5': return new SteadyV5(opts);
     case 'steady_v4': return new SteadyV4(opts);
     case 'steady_v3': return new SteadyV3(opts);
@@ -638,7 +651,7 @@ export class Filter2D {
    * amp = sqrt(mean over axes of sum(act_mix)) (per-axis amplitude).
    */
   info() {
-    if (this.name === 'steady' || this.name === 'steady_v5' || this.name === 'steady_v4' || this.name === 'steady_v3' || this.name === 'steady_v2') {
+    if (this.name === 'steady' || this.name === 'steady_v6' || this.name === 'steady_v5' || this.name === 'steady_v4' || this.name === 'steady_v3' || this.name === 'steady_v2') {
       const ax = this.fx.act, ay = this.fy.act, K = ax.length;
       if (!this._sum || this._sum.length !== K) this._sum = new Float64Array(K);
       const a = this._sum; let tot = 0;

@@ -4,7 +4,7 @@ import { settle, clampTo, clampMm } from '../js/settle.js';
 import { ShakeTracker } from '../js/shakestyle.js';
 import { PenMeter } from '../js/penmeter.js';
 import { shakePeriods, shakeSpectrum, frequencyFromPeriods } from '../js/shakefreq.js';
-import { RawFilter, EMAFilter, OneEuroFilter, SteadyFilter, SteadyV2, SteadyV3, SteadyV4, SteadyV5, SteadyV6, Filter2D, FILTER_NAMES, FREE_FILTER_NAMES, TremorTracker, fft, makeFilter } from '../js/filters.js';
+import { RawFilter, EMAFilter, OneEuroFilter, SteadyFilter, SteadyV2, SteadyV3, SteadyV4, SteadyV5, SteadyV6, SteadyV7, Filter2D, FILTER_NAMES, FREE_FILTER_NAMES, TremorTracker, fft, makeFilter } from '../js/filters.js';
 
 const results = [];
 const defaultLoader = async (rel) => { // browser: fetch relative to this module (serve software/)
@@ -261,7 +261,7 @@ export async function runTests(loadFile = defaultLoader) {
       }
       check('parity steady v4 (JS = Python) < 1e-9 incl. gate and y2', e < 1e-9 && eg < 1e-9 && ey < 1e-9 && nanMis === 0, `out ${e.toExponential(2)} g ${eg.toExponential(2)} y2 ${ey.toExponential(2)} nanMis ${nanMis}`);
     }
-    check("makeFilter('steady') is SteadyV6; 'steady_v5' and 'steady_v4' are still there", new Filter2D('steady').fx instanceof SteadyV6 && new Filter2D('steady_v5').fx instanceof SteadyV5 && new Filter2D('steady_v4').fx instanceof SteadyV4);
+    check("makeFilter('steady') is SteadyV7; 'steady_v6', 'steady_v5' and 'steady_v4' are still there", new Filter2D('steady').fx instanceof SteadyV7 && new Filter2D('steady_v6').fx instanceof SteadyV6 && new Filter2D('steady_v5').fx instanceof SteadyV5 && new Filter2D('steady_v4').fx instanceof SteadyV4);
   }
   // --- parity: SteadyV5 (v4 + drawing check) vs steady_v5_kalman.json, incl. gate, drawing check and y2
   {
@@ -314,6 +314,26 @@ export async function runTests(loadFile = defaultLoader) {
     const nx2 = nx.map((v) => v * 20), ny2 = ny.map((v) => v * 20); // strong noise, same size as the shake
     const hz = frequencyFromPeriods(shakePeriods(t, x, y), shakeSpectrum(t, x, y)), none = frequencyFromPeriods(shakePeriods(t, nx2, ny2), shakeSpectrum(t, nx2, ny2));
     check('check-in shake speed: ~6 Hz from a noisy 6 Hz shake, nothing from noise alone', hz !== null && Math.abs(hz - 6) < 0.6 && none === null, `found ${hz && hz.toFixed(2)} Hz, noise ${none}`);
+  }
+  // --- parity: SteadyV7 (v6 + size limit) vs steady_v7_kalman.json (input ends with a big 5 Hz scribble)
+  {
+    let txt = null;
+    try { txt = loadFile ? await loadFile('../../shared/test_vectors/steady_v7_kalman.json') : null; } catch { txt = null; }
+    if (txt == null) console.log('SKIP parity v7: steady_v7_kalman.json not found.');
+    else {
+      const v = JSON.parse(txt).steady_v7, f = new SteadyV7(); let e = 0, eg = 0, ei = 0, ea = 0, nanMis = 0, maxIt = 0;
+      const nn = (a) => a.map((x) => (x === null ? NaN : x));
+      const t = v.t, z = nn(v.z), ex = nn(v.expected), eam = nn(v.expected_amp);
+      for (let k = 0; k < t.length; k++) {
+        if (v.stroke_start[k]) f.startStroke();
+        const y = f.step(t[k], z[k]);
+        if (Number.isNaN(ex[k]) !== Number.isNaN(y)) nanMis++; else if (!Number.isNaN(y)) e = Math.max(e, Math.abs(y - ex[k]));
+        eg = Math.max(eg, Math.abs(f.g - v.expected_g[k])); ei = Math.max(ei, Math.abs(f.intent() - v.expected_intent[k])); maxIt = Math.max(maxIt, f.intent());
+        if (Number.isFinite(eam[k])) ea = Math.max(ea, Math.abs(f.tremor_amp_mm() - eam[k]));
+      }
+      check('parity steady v7 (JS = Python) < 1e-9 incl. gate, size limit and tremor size', e < 1e-9 && eg < 1e-9 && ei < 1e-9 && ea < 1e-9 && nanMis === 0 && maxIt > 0.9,
+        `out ${e.toExponential(2)} g ${eg.toExponential(2)} intent ${ei.toExponential(2)} size ${ea.toExponential(2)} max intent ${maxIt.toFixed(2)}`);
+    }
   }
   // --- drawing check: a deliberate 3 Hz, 20 mm zigzag is kept by v5 and flattened by v4
   {
