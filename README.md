@@ -14,6 +14,9 @@ Live: https://ayushpadarthi.github.io/steady.studentproject/
 | `trace.html` | Measurement task: trace (5 mm lane) and colouring pages, scored for the screen line and the raw hand | `js/trace.js` |
 | `checkin.html` | Measurement task: spiral check-in with shake size/speed and a dated log on the device | `js/checkin.js` |
 | `lab.html` | Evidence tool: compare filters on one drawing, study mode with CSV export, tremor-pen link + truth meter | `js/main.js`, `css/style.css` |
+| `judges.html` | For judges: try-it steps, how it works, criteria and held-out results, iterations, fairness, prior art, limits, FAQ | `css/info.css` |
+| `participants.html` | For participants: what a session would involve, what is recorded, choices, safety. **States that the study has not started and needs approval** | `css/info.css` |
+| `testers.html` | For testers: 21-step checklist (Works / Problem / Skip + notes, saved on the device), report download/copy with device facts; tremor-pen summary | `js/testers.js`, `css/info.css` |
 
 All pages use the **same** `js/filters.js`, so study results apply to the drawing app.
 
@@ -70,7 +73,7 @@ screen), used live by every page; without it the standard 96 px/in guess is used
 
 ## Releases
 Pages load files as `?v=N` so browsers never mix old and new code (GitHub Pages caches for 10 minutes). **Bump N in
-every `.html` and every `import` line, and `VERSION` in `sw.js`, when publishing** (currently 16). If you add a file,
+every `.html` and every `import` line, and `VERSION` in `sw.js`, when publishing** (currently 17). If you add a file,
 add it to the list in `sw.js` too.
 
 ## Filters (`js/filters.js`)
@@ -124,3 +127,5 @@ Protocol: `docs/04-architecture-spec.md`. Hardware: `hardware/README.md`.
 
 `window.__steadyDraw` (with `redrawInk`/`redrawAll`), `window.__steady`, `window.__steadyPen`, `window.__steadyCheckin`, `window.__steadyTrace` and
 the `__testT` event property exist only for automated checks.
+
+**Keep the judges page in step with `docs/09`:** its numbers are copied from there (held-out results).

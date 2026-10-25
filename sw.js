@@ -2,15 +2,16 @@
 // app keeps working with bad or no Wi-Fi (for example at the fair). Network first, so updates arrive as soon as
 // there is a connection; the stored copy is used when the network fails or takes longer than 3 s.
 // VERSION must match the ?v=N used by the pages (bump both when publishing).
-const VERSION = 16;
+const VERSION = 17;
 const CACHE = `steady-v${VERSION}`;
 const q = `?v=${VERSION}`;
 const FILES = [
-  './', 'index.html', 'draw.html', 'trace.html', 'checkin.html', 'lab.html', 'manifest.webmanifest',
+  './', 'index.html', 'draw.html', 'trace.html', 'checkin.html', 'lab.html', 'judges.html', 'participants.html', 'testers.html',
+  'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
-  ...['css/draw.css', 'css/pages.css', 'css/style.css'].map((f) => f + q),
+  ...['css/draw.css', 'css/pages.css', 'css/style.css', 'css/info.css'].map((f) => f + q),
   ...['calib', 'checkin', 'compare', 'draw', 'filters', 'main', 'pad', 'pagekit', 'penmeter', 'replay', 'serial', 'settle',
-    'shakestyle', 'store', 'study', 'tasks', 'trace', 'tremor'].map((f) => `js/${f}.js${q}`),
+    'shakestyle', 'store', 'study', 'tasks', 'testers', 'trace', 'tremor'].map((f) => `js/${f}.js${q}`),
 ];
 
 self.addEventListener('install', (e) => {

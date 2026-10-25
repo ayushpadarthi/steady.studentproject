@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="Steady for testers: a step-by-step checklist for trying the app on a device, with a downloadable report.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#1f6b4e">
+<title>Steady for testers</title>
+<link rel="stylesheet" href="css/info.css?v=17">
+</head>
+<body>
+<header class="bar"><div class="bar-in">
+  <a class="home" href="index.html">Steady</a>
+  <nav aria-label="Sections"><a href="judges.html">Judges</a><a href="participants.html">Participants</a><a href="testers.html" aria-current="page">Testers</a></nav>
+</div></header>
+
+<main>
+  <h1>Steady, for testers</h1>
+  <p class="lead">A checklist for trying Steady on a real device and stylus. Mark each step, add a note when something
+    is off, then download the report and give it to the team.</p>
+
+  <div class="box">
+    <p><b>How to use this page.</b> Open the linked page in another tab, do the step, come back and press
+      <b>Works</b>, <b>Problem</b> or <b>Skip</b>. A note box opens for problems: say what you did and what you saw.
+      Your marks are saved on this device only.</p>
+    <p class="fine">This is for testing the app (bugs, layout, feel). It is not the study with participants, and it
+      records no drawings.</p>
+  </div>
+
+  <h2>Before you start</h2>
+  <ul>
+    <li>Use the device you want to test: laptop, Chromebook, iPad, Android tablet or phone. Note the stylus, if any.</li>
+    <li>Browser zoom at 100 %. Chrome or Edge are needed only for the tremor pen.</li>
+    <li>Have any bank, library or school ID card ready for "Set real size".</li>
+  </ul>
+  <label class="fine" for="tester">Tester initials and device (optional, goes in the report)</label>
+  <div class="check" style="margin-top:4px"><textarea id="tester" rows="1" placeholder="e.g. RK, iPad 10th gen + Logitech Crayon, Safari"></textarea></div>
+
+  <div id="list"></div>
+
+  <div class="tally" aria-live="polite">
+    <b id="tally">0 of 0 done</b>
+    <button id="copy">Copy report</button>
+    <button id="dl" class="primary">Download report</button>
+    <button id="reset">Start over</button>
+  </div>
+
+  <h2>Hardware testers: the tremor pen</h2>
+  <p>The tremor pen is a servo that shakes a stylus repeatably, with a motion sensor that measures the real shake. It is
+    test equipment, not part of the app. Its full bench test is in the team's hardware folder
+    (<code>hardware/docs/BENCH_TEST.md</code>). In short:</p>
+  <ol class="steps">
+    <li>Flash the firmware, open a serial monitor at 921600 baud, type <code>Z</code> (centre) and <code>T,6,1.5,0</code>
+      (shake at 6 Hz, 1.5 mm). <code>X</code> stops it; it also stops itself after 15 s.</li>
+    <li>In the <a href="lab.html">Lab</a> (Chrome or Edge): set real size, enter the pen's arm length, <b>Connect</b>, tick
+      <b>Shake the real pen</b>, draw a slow line with the filter set to raw. It should wiggle by at least 70 % of the
+      asked size at 4-6 Hz.</li>
+    <li>With the motion sensor fitted: draw with Steady on for 3 seconds, press <b>Record this row</b>, repeat over
+      4-8 Hz and 1-3 mm, download the CSV.</li>
+  </ol>
+</main>
+<footer>A student science fair project. Not a medical device. Nothing you draw leaves your device.</footer>
+<script type="module" src="js/testers.js?v=17"></script>
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
+</body>
+</html>
