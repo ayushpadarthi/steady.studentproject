@@ -1,6 +1,6 @@
 // UI shared by the check-in and tracing pages: Steady switch, Demo popover (simulated tremor presets, raw line),
 // popover open/close, real-size calibration. Element ids follow draw.html (steady, steadyState, demoBtn, demoPop, synOn, presetList, ghostOn).
-import { openCalibration, calibrationLabel, onCalibrationChange } from './calib.js?v=19';
+import { openCalibration, calibrationLabel, onCalibrationChange } from './calib.js?v=20';
 
 export const $ = (id) => document.getElementById(id);
 export const DEMO_PRESETS = [

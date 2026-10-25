@@ -5,7 +5,9 @@
 export const FS = 120, PAD_S = 0.25;
 // LO/HI = tremor size (mm) where settling starts / is fully on. 0.2/0.4 since 2026-10-21 (re-picked on TRAIN for
 // Steady v4, which reads healthy hands a little higher; = eval_settle.V4_LO/V4_HI). v3 used 0.1/0.3.
-export const K = 0.5, BASE_FC = 8.0, LO = 0.2, HI = 0.4;
+// 0.6/1.0 since 2026-10-24 for Steady v6 (re-picked on TRAIN: v6 reads a healthy hand's tremor as ~0.3 mm, so the
+// old 0.2/0.4 smoothed healthy strokes; eval_settle.V6_LO/V6_HI).
+export const K = 0.5, BASE_FC = 8.0, LO = 0.6, HI = 1.0;
 
 export function butter2(fc, fs = FS) {
   const k = Math.tan(Math.PI * fc / fs), q = 1 / Math.sqrt(2), n = 1 / (1 + k / q + k * k), b0 = k * k * n;

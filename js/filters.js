@@ -580,18 +580,25 @@ export const V5_PARAMS = { ...V4_PARAMS, draw_fc: 4.0, draw_fw: 0.5, draw_ac: 1.
 export class SteadyV5 extends SteadyV3 {
   constructor(opts = {}) { super({ ...V5_PARAMS, ...opts }); }
 }
+/** Steady v6 (2026-10-24) = v5 + settings that follow variable tremor better (V6_PARAMS in filters.py; parity vs
+ *  shared/test_vectors/steady_v6_kalman.json). Its settling thresholds are 0.6/1.0 mm (js/settle.js). */
+export const V6_PARAMS = { ...V5_PARAMS, act_gain: 0.06, act_cap: 6.0, tau_w: 0.2, r: 0.012 };
+export class SteadyV6 extends SteadyV3 {
+  constructor(opts = {}) { super({ ...V6_PARAMS, ...opts }); }
+}
 
 /** Filters offered as study conditions (steady_v1 is deliberately absent). */
 export const FILTER_NAMES = ['raw', 'ema', 'steady']; // the pilot user test's three versions (study.js CONDITIONS)
 /** Filters selectable in free play. */
-export const FREE_FILTER_NAMES = ['raw', 'ema', 'one_euro', 'steady', 'steady_v4', 'steady_v3', 'steady_v2', 'steady_v1'];
+export const FREE_FILTER_NAMES = ['raw', 'ema', 'one_euro', 'steady', 'steady_v5', 'steady_v4', 'steady_v3', 'steady_v2', 'steady_v1'];
 
 export function makeFilter(name, opts = {}) {
   switch (name) {
     case 'raw': return new RawFilter();
     case 'ema': return new EMAFilter(opts);
     case 'one_euro': return new OneEuroFilter(opts);
-    case 'steady': return new SteadyV5(opts);
+    case 'steady': return new SteadyV6(opts);
+    case 'steady_v5': return new SteadyV5(opts);
     case 'steady_v4': return new SteadyV4(opts);
     case 'steady_v3': return new SteadyV3(opts);
     case 'steady_v2': return new SteadyV2(opts);
@@ -631,7 +638,7 @@ export class Filter2D {
    * amp = sqrt(mean over axes of sum(act_mix)) (per-axis amplitude).
    */
   info() {
-    if (this.name === 'steady' || this.name === 'steady_v4' || this.name === 'steady_v3' || this.name === 'steady_v2') {
+    if (this.name === 'steady' || this.name === 'steady_v5' || this.name === 'steady_v4' || this.name === 'steady_v3' || this.name === 'steady_v2') {
       const ax = this.fx.act, ay = this.fy.act, K = ax.length;
       if (!this._sum || this._sum.length !== K) this._sum = new Float64Array(K);
       const a = this._sum; let tot = 0;

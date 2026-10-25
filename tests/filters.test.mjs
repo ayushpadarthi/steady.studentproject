@@ -3,7 +3,7 @@
 import { settle, clampTo, clampMm } from '../js/settle.js';
 import { ShakeTracker } from '../js/shakestyle.js';
 import { PenMeter } from '../js/penmeter.js';
-import { RawFilter, EMAFilter, OneEuroFilter, SteadyFilter, SteadyV2, SteadyV3, SteadyV4, SteadyV5, Filter2D, FILTER_NAMES, FREE_FILTER_NAMES, TremorTracker, fft, makeFilter } from '../js/filters.js';
+import { RawFilter, EMAFilter, OneEuroFilter, SteadyFilter, SteadyV2, SteadyV3, SteadyV4, SteadyV5, SteadyV6, Filter2D, FILTER_NAMES, FREE_FILTER_NAMES, TremorTracker, fft, makeFilter } from '../js/filters.js';
 
 const results = [];
 const defaultLoader = async (rel) => { // browser: fetch relative to this module (serve software/)
@@ -260,7 +260,7 @@ export async function runTests(loadFile = defaultLoader) {
       }
       check('parity steady v4 (JS = Python) < 1e-9 incl. gate and y2', e < 1e-9 && eg < 1e-9 && ey < 1e-9 && nanMis === 0, `out ${e.toExponential(2)} g ${eg.toExponential(2)} y2 ${ey.toExponential(2)} nanMis ${nanMis}`);
     }
-    check("makeFilter('steady') is SteadyV5 (v4 + drawing check); 'steady_v4' is still there", new Filter2D('steady').fx instanceof SteadyV5 && new Filter2D('steady_v4').fx instanceof SteadyV4);
+    check("makeFilter('steady') is SteadyV6; 'steady_v5' and 'steady_v4' are still there", new Filter2D('steady').fx instanceof SteadyV6 && new Filter2D('steady_v5').fx instanceof SteadyV5 && new Filter2D('steady_v4').fx instanceof SteadyV4);
   }
   // --- parity: SteadyV5 (v4 + drawing check) vs steady_v5_kalman.json, incl. gate, drawing check and y2
   {
@@ -283,14 +283,35 @@ export async function runTests(loadFile = defaultLoader) {
         `out ${e.toExponential(2)} g ${eg.toExponential(2)} intent ${ei.toExponential(2)} y2 ${ey.toExponential(2)} max intent ${maxIt.toFixed(2)}`);
     }
   }
+  // --- parity: SteadyV6 (v5 + variable-tremor settings) vs steady_v6_kalman.json, incl. gate, drawing check, y2, size
+  {
+    let txt = null;
+    try { txt = loadFile ? await loadFile('../../shared/test_vectors/steady_v6_kalman.json') : null; } catch { txt = null; }
+    if (txt == null) console.log('SKIP parity v6: steady_v6_kalman.json not found.');
+    else {
+      const v = JSON.parse(txt).steady_v6, f = new SteadyV6(); let e = 0, eg = 0, ei = 0, ey = 0, ea = 0, nanMis = 0;
+      const nn = (a) => a.map((x) => (x === null ? NaN : x));
+      const t = v.t, z = nn(v.z), ex = nn(v.expected), ey2 = nn(v.expected_y2), eam = nn(v.expected_amp);
+      for (let k = 0; k < t.length; k++) {
+        if (v.stroke_start[k]) f.startStroke();
+        const y = f.step(t[k], z[k]);
+        if (Number.isNaN(ex[k]) !== Number.isNaN(y)) nanMis++; else if (!Number.isNaN(y)) e = Math.max(e, Math.abs(y - ex[k]));
+        eg = Math.max(eg, Math.abs(f.g - v.expected_g[k])); ei = Math.max(ei, Math.abs(f.intent() - v.expected_intent[k]));
+        if (Number.isFinite(ey2[k]) && Number.isFinite(f.y2)) ey = Math.max(ey, Math.abs(f.y2 - ey2[k]));
+        if (Number.isFinite(eam[k])) ea = Math.max(ea, Math.abs(f.tremor_amp_mm() - eam[k]));
+      }
+      check('parity steady v6 (JS = Python) < 1e-9 incl. gate, drawing check, y2 and tremor size', e < 1e-9 && eg < 1e-9 && ei < 1e-9 && ey < 1e-9 && ea < 1e-9 && nanMis === 0,
+        `out ${e.toExponential(2)} g ${eg.toExponential(2)} intent ${ei.toExponential(2)} y2 ${ey.toExponential(2)} size ${ea.toExponential(2)}`);
+    }
+  }
   // --- drawing check: a deliberate 3 Hz, 20 mm zigzag is kept by v5 and flattened by v4
   {
     const run = (F) => { const f = new F(); f.startStroke(); let worst = 0;
       for (let k = 0; k < 360; k++) { const tk = k / 120, u = 3 * tk, z = 20 * tk + 20 * (4 * Math.abs(u - Math.floor(u + 0.5)) - 1);
         const y = f.step(tk, z); if (tk > 1.5) worst = Math.max(worst, Math.abs(y - z)); }
       return worst; };
-    const w5 = run(SteadyV5), w4 = run(SteadyV4);
-    check('drawing check: v5 keeps a 3 Hz, 20 mm zigzag (max gap < 6 mm after 1.5 s, = 16 ms lag at 240 mm/s), v4 does not', w5 < 6 && w4 > 3 * w5, `v5 ${w5.toFixed(2)} mm, v4 ${w4.toFixed(2)} mm`);
+    const w5 = run(SteadyV5), w4 = run(SteadyV4), w6 = run(SteadyV6);
+    check('drawing check: v5 keeps a 3 Hz, 20 mm zigzag (max gap < 6 mm after 1.5 s, = 16 ms lag at 240 mm/s), v4 does not', w5 < 6 && w6 < 6 && w4 > 3 * w5, `v5 ${w5.toFixed(2)} mm, v6 ${w6.toFixed(2)} mm, v4 ${w4.toFixed(2)} mm`);
   }
   // --- truth meter (tremor pen): recovers frequency and tip size from gyro rocking and from commanded offsets
   {

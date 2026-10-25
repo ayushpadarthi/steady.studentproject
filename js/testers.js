@@ -1,6 +1,6 @@
 // Tester checklist: steps grouped by page, each marked Works / Problem / Skip with an optional note.
 // Saved in localStorage on this device; the report (text) includes device facts so bugs can be reproduced.
-import { calibration } from './calib.js?v=19';
+import { calibration } from './calib.js?v=20';
 
 const KEY = 'steady.testers.v1';
 const GROUPS = [
