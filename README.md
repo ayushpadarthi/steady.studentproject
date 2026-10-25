@@ -73,7 +73,7 @@ screen), used live by every page; without it the standard 96 px/in guess is used
 
 ## Releases
 Pages load files as `?v=N` so browsers never mix old and new code (GitHub Pages caches for 10 minutes). **Bump N in
-every `.html` and every `import` line, and `VERSION` in `sw.js`, when publishing** (currently 17). If you add a file,
+every `.html` and every `import` line, and `VERSION` in `sw.js`, when publishing** (currently 18). If you add a file,
 add it to the list in `sw.js` too.
 
 ## Filters (`js/filters.js`)
@@ -93,6 +93,7 @@ changes, a new study session starts, or a new study condition starts.
 ## Other files
 | File | What |
 |---|---|
+| `js/sitemenu.js` | Site menu: the "Steady" name at the top left of every page opens a list of all pages |
 | `js/calib.js` | Real-size calibration (mm per CSS px) shared by all pages, and the "match a card" dialog |
 | `js/store.js` | Keeps the current drawing on the device (IndexedDB) |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Offline copy (network first, stored copy after 3 s or with no network) and home-screen install |

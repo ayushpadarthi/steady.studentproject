@@ -1,12 +1,12 @@
 // Steady drawing app. Uses the SAME filter code as the lab (js/filters.js), so study results apply to it.
-import { Filter2D } from './filters.js?v=17';
-import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=17';
-import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=17';
-import { openReplay } from './replay.js?v=17';
-import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=17';
+import { Filter2D } from './filters.js?v=18';
+import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=18';
+import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=18';
+import { openReplay } from './replay.js?v=18';
+import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=18';
 // MM_PER_PX: the device's real size (js/calib.js); the filter's parameters are in millimetres
-import { MM_PER_PX, onCalibrationChange, openCalibration, calibrationLabel } from './calib.js?v=17';
-import { saveDrawing, loadDrawing } from './store.js?v=17';
+import { MM_PER_PX, onCalibrationChange, openCalibration, calibrationLabel } from './calib.js?v=18';
+import { saveDrawing, loadDrawing } from './store.js?v=18';
 
 const $ = (id) => document.getElementById(id);
 

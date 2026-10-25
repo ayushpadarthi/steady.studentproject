@@ -1,12 +1,12 @@
 // Steady app: drawing canvas, live filters, synthetic tremor, study mode, optional serial.
-import { Filter2D, TremorTracker } from './filters.js?v=17';
-import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=17';
-import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=17';
-import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=17';
-import { PenMeter } from './penmeter.js?v=17';
-import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=17';
-import { openCompare } from './compare.js?v=17';
-import { MM_PER_PX, calibration, setMmPerPx, onCalibrationChange, openCalibration } from './calib.js?v=17';
+import { Filter2D, TremorTracker } from './filters.js?v=18';
+import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=18';
+import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=18';
+import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=18';
+import { PenMeter } from './penmeter.js?v=18';
+import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=18';
+import { openCompare } from './compare.js?v=18';
+import { MM_PER_PX, calibration, setMmPerPx, onCalibrationChange, openCalibration } from './calib.js?v=18';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('draw'), ctx = canvas.getContext('2d');
