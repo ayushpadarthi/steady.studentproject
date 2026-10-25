@@ -3,6 +3,7 @@
 import { settle, clampTo, clampMm } from '../js/settle.js';
 import { ShakeTracker } from '../js/shakestyle.js';
 import { PenMeter } from '../js/penmeter.js';
+import { shakePeriods, shakeSpectrum, frequencyFromPeriods } from '../js/shakefreq.js';
 import { RawFilter, EMAFilter, OneEuroFilter, SteadyFilter, SteadyV2, SteadyV3, SteadyV4, SteadyV5, SteadyV6, Filter2D, FILTER_NAMES, FREE_FILTER_NAMES, TremorTracker, fft, makeFilter } from '../js/filters.js';
 
 const results = [];
@@ -303,6 +304,16 @@ export async function runTests(loadFile = defaultLoader) {
       check('parity steady v6 (JS = Python) < 1e-9 incl. gate, drawing check, y2 and tremor size', e < 1e-9 && eg < 1e-9 && ei < 1e-9 && ey < 1e-9 && ea < 1e-9 && nanMis === 0,
         `out ${e.toExponential(2)} g ${eg.toExponential(2)} intent ${ei.toExponential(2)} y2 ${ey.toExponential(2)} size ${ea.toExponential(2)}`);
     }
+  }
+  // --- check-in shake speed from the drawn shake: finds 6 Hz in a noisy, slightly irregular shake; nothing in noise
+  {
+    let seed = 7; const rnd = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296) - 0.5;
+    const t = [], x = [], y = [], nx = [], ny = []; let ph = 0;
+    for (let k = 0; k < 600; k++) { const tk = k / 120; ph += 2 * Math.PI * (6 + 0.8 * Math.sin(tk)) / 120;
+      t.push(tk); x.push(Math.cos(ph) * 0.8 + 0.05 * rnd()); y.push(0.4 * Math.cos(ph) + 0.05 * rnd()); nx.push(0.05 * rnd()); ny.push(0.05 * rnd()); }
+    const nx2 = nx.map((v) => v * 20), ny2 = ny.map((v) => v * 20); // strong noise, same size as the shake
+    const hz = frequencyFromPeriods(shakePeriods(t, x, y), shakeSpectrum(t, x, y)), none = frequencyFromPeriods(shakePeriods(t, nx2, ny2), shakeSpectrum(t, nx2, ny2));
+    check('check-in shake speed: ~6 Hz from a noisy 6 Hz shake, nothing from noise alone', hz !== null && Math.abs(hz - 6) < 0.6 && none === null, `found ${hz && hz.toFixed(2)} Hz, noise ${none}`);
   }
   // --- drawing check: a deliberate 3 Hz, 20 mm zigzag is kept by v5 and flattened by v4
   {

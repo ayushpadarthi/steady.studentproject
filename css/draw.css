@@ -198,3 +198,7 @@ a.mark:hover { text-decoration: underline; }
 .race-key .key-item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .race-key .sw { display: inline-block; width: 14px; height: 6px; border-radius: 3px; }
 .race-key .sw-stab { background: rgba(47,143,206,.6); }
+
+/* experimental shake styles: hidden unless switched on in Demo */
+#styleSection { display: flex; flex-direction: column; gap: 10px; }
+#styleSection[hidden] { display: none; }

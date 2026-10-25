@@ -1,12 +1,12 @@
 // Steady app: drawing canvas, live filters, synthetic tremor, study mode, optional serial.
-import { Filter2D, TremorTracker } from './filters.js?v=20';
-import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=20';
-import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=20';
-import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=20';
-import { PenMeter } from './penmeter.js?v=20';
-import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=20';
-import { openCompare } from './compare.js?v=20';
-import { MM_PER_PX, calibration, setMmPerPx, onCalibrationChange, openCalibration } from './calib.js?v=20';
+import { Filter2D, TremorTracker } from './filters.js?v=22';
+import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=22';
+import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=22';
+import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=22';
+import { PenMeter } from './penmeter.js?v=22';
+import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=22';
+import { openCompare } from './compare.js?v=22';
+import { MM_PER_PX, calibration, setMmPerPx, onCalibrationChange, openCalibration, promptCalibrationIfNeeded } from './calib.js?v=22';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('draw'), ctx = canvas.getContext('2d');
@@ -214,6 +214,7 @@ $('calReset').addEventListener('click', () => setMmPerPx(null));
 $('calCard').addEventListener('click', () => openCalibration());
 onCalibrationChange(applyCal);
 applyCal();
+promptCalibrationIfNeeded();
 
 // ---------------------------------------------------------------- study mode
 const ST = () => S.study;
@@ -296,13 +297,23 @@ function finishTrial() {
   if (st.si >= seqFor(st).length) {
     st.stage = 'rating'; S.strokes = []; S.cur = null; S.template = null; redraw();
     $('btnDone').disabled = true; $('btnRedo').disabled = true; $('stRating').hidden = false;
-    $('ratingSl').value = 5; $('ratingO').textContent = '5';
+    $('ratingSl').value = ''; $('ratingO').textContent = 'none yet'; $('btnRate').disabled = true;
+    for (const o of $('ratingBtns').children) o.setAttribute('aria-pressed', 'false');
     $('stTask').textContent = ''; $('banner').textContent = `Condition ${st.ci + 1} of ${st.order.length} finished`;
   } else beginTask();
 }
-$('ratingSl').addEventListener('input', (e) => { $('ratingO').textContent = e.target.value; });
+// 0-10 rating as big buttons (a slider is hard with a shaky hand); nothing pre-selected, so no default answer
+for (let v = 0; v <= 10; v++) {
+  const b = document.createElement('button'); b.textContent = String(v); b.setAttribute('aria-pressed', 'false');
+  b.setAttribute('aria-label', `${v}${v === 0 ? ' (no control)' : v === 10 ? ' (full control)' : ''}`);
+  b.addEventListener('click', () => {
+    $('ratingSl').value = String(v); $('ratingO').textContent = String(v); $('btnRate').disabled = false;
+    for (const o of $('ratingBtns').children) o.setAttribute('aria-pressed', String(o === b));
+  });
+  $('ratingBtns').appendChild(b);
+}
 $('btnRate').addEventListener('click', () => {
-  const st = ST(); if (!st || st.stage !== 'rating') return;
+  const st = ST(); if (!st || st.stage !== 'rating' || $('ratingSl').value === '') return;
   const sp = st.condTrials.filter((t) => t.spiral);
   const avg = (k, f) => (sp.length ? sp.reduce((a, t) => a + t.spiral[k][f], 0) / sp.length : NaN);
   st.summary.push({

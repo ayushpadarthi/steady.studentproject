@@ -5,13 +5,17 @@
 //   shake size  = sqrt(2) x RMS distance between the RAW line and the same line smoothed with a zero-phase
 //                 3 Hz low-pass (js/settle.js), ignoring the first/last 0.25 s of each stroke. For a steady
 //                 back-and-forth shake this is its peak size; slow intended movement is not counted.
-//   shake speed = Steady's detected tremor frequency (approximate; shown when conf >= 0.3 and size >= 0.15 mm).
+//   shake speed = measured from the same shake signal (raw minus 3 Hz smoothing): the main direction of the shake in
+//                 each stroke, the time between its upward zero crossings (3-12 Hz), median over all cycles. Shown
+//                 only when the shake is clear (size >= 0.2 mm, >= 8 cycles, >= half of them within 25 % of the
+//                 median, and its energy concentrated near one frequency). Independent of Steady, so it is the same with Steady on or off (since 2026-10-25).
 //   off spiral  = mean |radial distance| to the guide spiral (js/tasks.js), for the raw hand and for Steady's line.
-import { createPad, MM_PER_PX } from './pad.js?v=20';
-import { $, wireCommon, download, fitCanvas } from './pagekit.js?v=20';
-import { makeTemplate, spiralRadialErrors, errStats } from './tasks.js?v=20';
-import { settle } from './settle.js?v=20';
-import { calibration, onCalibrationChange, openCalibration } from './calib.js?v=20';
+import { createPad, MM_PER_PX } from './pad.js?v=22';
+import { $, wireCommon, download, fitCanvas } from './pagekit.js?v=22';
+import { makeTemplate, spiralRadialErrors, errStats } from './tasks.js?v=22';
+import { settle } from './settle.js?v=22';
+import { shakePeriods, shakeSpectrum, frequencyFromPeriods } from './shakefreq.js?v=22';
+import { calibration, onCalibrationChange, openCalibration, promptCalibrationIfNeeded } from './calib.js?v=22';
 
 const KEY = 'steady.checkin.log';
 const guide = $('guide');
@@ -45,16 +49,20 @@ function status(msg) {
 export function measure(strokes, sp, c) {
   const rel = (p) => [(p.x - c.cx) * MM_PER_PX, (p.y - c.cy) * MM_PER_PX];
   const raw = [], fin = [];
-  let sq = 0, n = 0, dur = 0, maxTh = 0;
+  let sq = 0, n = 0, dur = 0, maxTh = 0; const periods = []; let spec = null;
   for (const s of strokes) {
     if (s.t.length < 3) continue;
     dur += s.t[s.t.length - 1] - s.t[0];
     const xs = s.raw.map((p) => p.x * MM_PER_PX), ys = s.raw.map((p) => p.y * MM_PER_PX);
     const [lx, ly] = settle(s.t, xs, ys, 3.0);
+    const st = [], sx = [], sy = [];
     for (let i = 0; i < s.t.length; i++) {
       if (s.t[i] - s.t[0] < 0.25 || s.t[s.t.length - 1] - s.t[i] < 0.25) continue;
       sq += (xs[i] - lx[i]) ** 2 + (ys[i] - ly[i]) ** 2; n++;
+      st.push(s.t[i]); sx.push(xs[i] - lx[i]); sy.push(ys[i] - ly[i]);
     }
+    periods.push(...shakePeriods(st, sx, sy));
+    const sp1 = shakeSpectrum(st, sx, sy); spec = spec ? spec.map((v, i) => v + sp1[i]) : sp1;
     for (const p of s.raw) { const q = rel(p); raw.push(q); }
     for (const p of s.pts) fin.push(rel(p));
   }
@@ -64,26 +72,21 @@ export function measure(strokes, sp, c) {
     const k = Math.max(0, Math.min(sp.turns - 1, Math.round((r - sp.r0) / (sp.b * 2 * Math.PI) - th / (2 * Math.PI))));
     maxTh = Math.max(maxTh, th + 2 * Math.PI * k);
   }
+  const shakeMm = n ? Math.SQRT2 * Math.sqrt(sq / n) : NaN;
   return {
-    shakeMm: n ? Math.SQRT2 * Math.sqrt(sq / n) : NaN,
+    shakeMm, hz: shakeMm >= 0.2 ? frequencyFromPeriods(periods, spec) : null,
     errRaw: errStats(spiralRadialErrors(raw, sp)).mean,
     errSteady: errStats(spiralRadialErrors(fin, sp)).mean,
     dur, coverage: Math.min(1, maxTh / (sp.turns * 2 * Math.PI)), samples: raw.length,
   };
 }
 
-function shakeHz() {
-  const info = pad.filter.info();
-  // Looser than the app's status line (conf 0.5): irregular tremor spreads its energy, and here the number is
-  // shown as approximate next to a measured size, not as a claim that a tremor exists.
-  return info && Number.isFinite(info.f0) && info.conf >= 0.3 && info.amp >= 0.15 ? info.f0 : null;
-}
 const fmt = (v, d = 1, u = ' mm') => (Number.isFinite(v) ? `${v.toFixed(d)}${u}` : '–');
 
 $('done').onclick = () => {
   if (!pad.strokes.length) return;
   const m = measure(pad.strokes, tpl.spiral, centre());
-  result = { ...m, hz: shakeHz(), steady: pad.steady, demo: pad.syn.on ? pad.syn.preset : null };
+  result = { ...m, steady: pad.steady, demo: pad.syn.on ? pad.syn.preset : null };
   $('rShake').textContent = fmt(m.shakeMm, m.shakeMm < 1 ? 2 : 1);
   $('rShakeNote').textContent = 'shake size (peak, approx.)';
   $('rHz').textContent = result.hz ? `about ${result.hz.toFixed(1)} Hz` : 'no clear shake';
@@ -171,5 +174,5 @@ $('exportCsv').onclick = () => {
   download('steady-checkins', [cols.join(',')].concat(readLog().map((e) => cols.map((c) => e[c] ?? '').join(','))).join('\n') + '\n');
 };
 
-status();
+status(); promptCalibrationIfNeeded();
 window.__steadyCheckin = { pad, measure, centre, get tpl() { return tpl; } }; // automated checks only

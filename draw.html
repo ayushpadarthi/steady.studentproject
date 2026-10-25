@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#1f6b4e">
 <title>Steady</title>
-<link rel="stylesheet" href="css/draw.css?v=20">
+<link rel="stylesheet" href="css/draw.css?v=22">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -78,10 +78,12 @@
   <p class="pop-title">Smoothing</p>
   <p class="pop-note">While you draw, Steady keeps the line fast. When you lift the pen, the stroke can settle into a smoother line. The amount follows the shake Steady has measured.</p>
   <div id="smoothList" class="presets" role="group" aria-label="Smoothing amount"></div>
+  <div id="styleSection" hidden>
   <p class="pop-title">Shake style <span class="tag">experimental</span></p>
   <p class="pop-note">Steady separates your shake from the line you meant. Instead of only deleting it, it can become part of the brush. The line still goes where you meant it to.</p>
   <p id="styleNote" class="pop-note warn-note" hidden>Turn Steady on to use a shake style.</p>
   <div id="styleList" class="presets" role="group" aria-label="Shake style"></div>
+  </div>
 </div>
 <div id="demoPop" class="pop demo" role="dialog" aria-label="Demonstration settings" hidden>
   <p class="pop-title">Demonstration</p>
@@ -91,6 +93,7 @@
   <button id="ghostOn" class="row-switch" role="switch" aria-checked="false"><span>Show the raw, shaky line</span><span class="mini"><span class="knob"></span></span></button>
   <button id="shakeOn" class="row-switch" role="switch" aria-checked="false"><span>Show "Your shake" card</span><span class="mini"><span class="knob"></span></span></button>
   <button id="raceOn" class="row-switch" role="switch" aria-checked="false"><span>Lag race: also draw a typical stabiliser's line</span><span class="mini"><span class="knob"></span></span></button>
+  <button id="expOn" class="row-switch" role="switch" aria-checked="false"><span>Show experimental shake styles (future work)</span><span class="mini"><span class="knob"></span></span></button>
   <button id="replayBtn" class="row-btn" title="Watch your last stroke again, slowed down (R)"><svg><use href="#i-redo"/></svg><span>Replay last stroke in slow motion</span></button>
   <button id="saveBA" class="row-btn" title="One picture: your raw input on the left, the Steady line on the right"><svg><use href="#i-save"/></svg><span>Save before/after picture</span></button>
   <button id="calBtn" class="row-btn" title="Match a card so millimetres are real on this screen"><span>Set real size (match a card)</span></button>
@@ -100,8 +103,8 @@
 
 <div id="flash" class="flash" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="js/draw.js?v=20"></script>
+<script type="module" src="js/draw.js?v=22"></script>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
-<script type="module" src="js/sitemenu.js?v=20"></script>
+<script type="module" src="js/sitemenu.js?v=22"></script>
 </body>
 </html>

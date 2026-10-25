@@ -1,12 +1,13 @@
 // Steady drawing app. Uses the SAME filter code as the lab (js/filters.js), so study results apply to it.
-import { Filter2D } from './filters.js?v=20';
-import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=20';
-import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=20';
-import { openReplay } from './replay.js?v=20';
-import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=20';
+import { Filter2D } from './filters.js?v=22';
+import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=22';
+import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp, settle } from './settle.js?v=22';
+import { shakePeriods, shakeSpectrum, frequencyFromPeriods } from './shakefreq.js?v=22';
+import { openReplay } from './replay.js?v=22';
+import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=22';
 // MM_PER_PX: the device's real size (js/calib.js); the filter's parameters are in millimetres
-import { MM_PER_PX, onCalibrationChange, openCalibration, calibrationLabel } from './calib.js?v=20';
-import { saveDrawing, loadDrawing } from './store.js?v=20';
+import { MM_PER_PX, onCalibrationChange, openCalibration, calibrationLabel, promptCalibrationIfNeeded } from './calib.js?v=22';
+import { saveDrawing, loadDrawing } from './store.js?v=22';
 
 const $ = (id) => document.getElementById(id);
 
@@ -32,13 +33,17 @@ const SMOOTH = [
 ];
 const SETTLE_MS = 350; // length of the settling animation
 const SHAKE_WIN = 2;   // seconds of trace on the "Your shake" card
+// Smallest detected tremor size (mm) the status line and shake card call a shake. 0.4 since Steady v6, which reads a
+// healthy hand as up to ~0.3 mm (ET mild reads ~0.7-1.1 mm).
+const CLAIM_MM = 0.4;
 
 // ---------------------------------------------------------------- state
 const S = {
   steady: true, tool: 'brush', color: COLORS[0][1], size: 4,
-  syn: { on: false, preset: 'et_moderate' }, ghost: false, smooth: 'smooth', style: 'none', shakeCard: false, race: false,
+  syn: { on: false, preset: 'et_moderate' }, ghost: false, smooth: 'smooth', style: 'none', shakeCard: false, race: false, exp: false, // exp: show the experimental shake styles (off for judging)
   raceStat: null,                      // lag race: {liveS, liveR, sumS, sumR, n, done} in mm (distance of each line from the pen)
   shake: [],                            // last 2 s of {t, dx, dy}: raw minus filtered position, mm (for the "Your shake" card)
+  rawHist: [], hz: null,                // last 4 s of pen-down input {t, x, y} (mm) and the shake speed measured from it
   strokes: [], history: [], redo: [],   // history items: {kind:'stroke', stroke} | {kind:'clear', removed:[...]}
   cur: null, pointerId: null, sawPen: false, lastT: -Infinity,
   w: 0, h: 0, dpr: 1,
@@ -191,6 +196,8 @@ function ingest(ev) {
   // (so a slow, big wiggle that the drawing check keeps as drawing is not turned into shake marks)
   const dsx = (xm - steadyF.fx.y2) * steadyF.fx.g, dsy = (ym - steadyF.fy.y2) * steadyF.fy.g;
   const [env, mark] = shakeT.step(t, fx, fy, dsx, dsy);
+  S.rawHist.push({ t, x: xm, y: ym });
+  while (S.rawHist.length && S.rawHist[0].t < t - 4) S.rawHist.shift();
   if (Number.isFinite(fx) && Number.isFinite(fy)) {
     S.shake.push({ t, dx: xm - fx, dy: ym - fy });
     while (S.shake.length && S.shake[0].t < t - SHAKE_WIN) S.shake.shift();
@@ -369,6 +376,7 @@ function syncButtons() {
   for (const b of document.querySelectorAll('.size')) b.setAttribute('aria-pressed', String(+b.dataset.s === S.size));
   $('synOn').setAttribute('aria-checked', String(S.syn.on)); $('ghostOn').setAttribute('aria-checked', String(S.ghost));
   $('shakeOn').setAttribute('aria-checked', String(S.shakeCard)); $('shakeCard').hidden = !S.shakeCard;
+  $('expOn').setAttribute('aria-checked', String(S.exp)); $('styleSection').hidden = !S.exp;
   $('raceOn').setAttribute('aria-checked', String(S.race)); $('raceCard').hidden = !S.race; $('raceSwatch').style.background = S.color;
   $('saveBA').disabled = !S.strokes.length;
   for (const b of document.querySelectorAll('#presetList .preset')) b.setAttribute('aria-pressed', String(b.dataset.k === S.syn.preset));
@@ -457,6 +465,7 @@ $('replayBtn').onclick = replayLast;
 $('synOn').onclick = () => { S.syn.on = !S.syn.on; syncButtons(); };
 $('ghostOn').onclick = () => { S.ghost = !S.ghost; syncButtons(); };
 $('shakeOn').onclick = () => { S.shakeCard = !S.shakeCard; if (S.shakeCard) S.race = false; syncButtons(); redrawAll(); updateShakeCard(); };
+$('expOn').onclick = () => { S.exp = !S.exp; if (!S.exp) S.style = 'none'; syncButtons(); updateStatus(); };
 $('raceOn').onclick = () => {
   S.race = !S.race; if (S.race) S.shakeCard = false;   // both cards use the same spot
   syncButtons(); redrawAll(); updateRaceCard();
@@ -485,7 +494,7 @@ document.addEventListener('keydown', (e) => {
   else if (k === 's') setSteady(!S.steady);
   else if (k === 'm') { const i = (SMOOTH.findIndex(([q]) => q === S.smooth) + 1) % SMOOTH.length; S.smooth = SMOOTH[i][0]; syncButtons(); updateStatus(); flash(`Smoothing: ${SMOOTH[i][1]}`); }
   else if (k === 'r') replayLast();
-  else if (k === 'k') { const i = (STYLES.findIndex(([q]) => q === S.style) + 1) % STYLES.length; S.style = STYLES[i][0]; syncButtons(); flash(`Shake style: ${STYLES[i][1]}`); }
+  else if (k === 'k' && S.exp) { const i = (STYLES.findIndex(([q]) => q === S.style) + 1) % STYLES.length; S.style = STYLES[i][0]; syncButtons(); flash(`Shake style: ${STYLES[i][1]}`); }
   else if (k === '[' || k === ']') {
     const i = SIZES.indexOf(S.size) + (k === ']' ? 1 : -1);
     S.size = SIZES[Math.max(0, Math.min(SIZES.length - 1, i))]; syncButtons();
@@ -493,15 +502,38 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Status line: says in plain words what the filter is doing. Only claims a tremor when it is clearly there.
+// Shake speed measured from the last 4 s of what the pen actually drew (same method as the spiral check-in,
+// js/shakefreq.js): raw minus 3 Hz zero-phase smoothing, cycles + energy check. Steady's own frequency read-out wanders
+// with irregular tremor (it once read 7.9 Hz for a 6.5 Hz shake), so the number shown comes from here instead.
+function measureHz() {
+  const H = S.rawHist, periods = []; let spec = null, sq = 0, n = 0, i = 0;
+  while (i < H.length) {
+    let j = i + 1; while (j < H.length && H[j].t - H[j - 1].t < 0.1) j++;   // one pen-down segment
+    if (j - i >= 90) {
+      const seg = H.slice(i, j), t = seg.map((p) => p.t), xs = seg.map((p) => p.x), ys = seg.map((p) => p.y);
+      const [lx, ly] = settle(t, xs, ys, 3.0), tt = [], rx = [], ry = [];
+      for (let k = 0; k < t.length; k++) {
+        if (t[k] - t[0] < 0.25 || t[t.length - 1] - t[k] < 0.25) continue;
+        tt.push(t[k]); rx.push(xs[k] - lx[k]); ry.push(ys[k] - ly[k]); sq += rx[rx.length - 1] ** 2 + ry[ry.length - 1] ** 2; n++;
+      }
+      periods.push(...shakePeriods(tt, rx, ry));
+      const sp = shakeSpectrum(tt, rx, ry); spec = spec ? spec.map((v, k) => v + sp[k]) : sp;
+    }
+    i = j;
+  }
+  const size = n ? Math.SQRT2 * Math.sqrt(sq / n) : 0;
+  S.hz = size >= 0.2 ? frequencyFromPeriods(periods, spec) : null;
+}
 function updateStatus() {
+  measureHz();
   const el = $('status');
   if (!S.steady) { el.textContent = 'Steady is off: drawing your raw input'; return; }
   const info = steadyF.info(), st = STYLES.find(([k]) => k === S.style)[1];
   const sm = SMOOTH.find(([k]) => k === S.smooth)[1] + (S.style === 'none' ? '' : ` \u00b7 Shake style: ${st}`);
   const drawing = steadyF.fx.intent ? Math.max(steadyF.fx.intent(), steadyF.fy.intent()) : 0;
   if (drawing > 0.5) el.textContent = `Slow, big wiggle: keeping it as drawing \u00b7 Smoothing: ${sm}`;
-  else if (info && Number.isFinite(info.f0) && info.conf >= 0.5 && info.amp >= 0.15) {
-    el.textContent = `Removing a ${info.f0.toFixed(1)} Hz shake \u00b7 Smoothing: ${sm}`;
+  else if (info && Number.isFinite(info.f0) && info.conf >= 0.5 && info.amp >= CLAIM_MM) {
+    el.textContent = (S.hz ? `Removing a ${S.hz.toFixed(1)} Hz shake` : 'Removing a shake') + ` \u00b7 Smoothing: ${sm}`;
   } else el.textContent = `Steady is on: no shake detected yet \u00b7 Smoothing: ${sm}`;
 }
 setInterval(() => { if (S.pointerId !== null || !document.hidden) updateStatus(); }, 300);
@@ -513,9 +545,9 @@ function updateShakeCard() {
   const info = steadyF.info();
   const amp = Math.max(steadyF.fx.tremor_amp_mm(), steadyF.fy.tremor_amp_mm());
   const drawing = steadyF.fx.intent ? Math.max(steadyF.fx.intent(), steadyF.fy.intent()) > 0.5 : false;
-  const sure = !drawing && info && Number.isFinite(info.f0) && info.conf >= 0.5 && info.amp >= 0.15;
+  const sure = !drawing && info && Number.isFinite(info.f0) && info.conf >= 0.5 && info.amp >= CLAIM_MM;
   $('shakeLine').textContent = drawing ? 'Slow, big wiggle: treated as drawing' : sure ? 'Shake detected' : 'No clear shake yet';
-  $('shakeHz').textContent = sure ? `${info.f0.toFixed(1)} Hz` : '\u2013';
+  $('shakeHz').textContent = sure && S.hz ? `${S.hz.toFixed(1)} Hz` : '\u2013';
   $('shakeMm').textContent = sure ? `about ${amp.toFixed(1)} mm` : '\u2013';
   // trace
   const cw = traceCv.clientWidth, ch = traceCv.clientHeight, dpr = S.dpr;
@@ -575,7 +607,7 @@ function restoreDrawing() {
 
 // ---------------------------------------------------------------- preferences (per device)
 function persist() {
-  try { localStorage.setItem('steady.draw.prefs', JSON.stringify({ steady: S.steady, color: S.color, size: S.size, syn: { preset: S.syn.preset }, ghost: S.ghost, smooth: S.smooth, style: S.style, shakeCard: S.shakeCard, race: S.race })); } catch {}
+  try { localStorage.setItem('steady.draw.prefs', JSON.stringify({ steady: S.steady, color: S.color, size: S.size, syn: { preset: S.syn.preset }, ghost: S.ghost, smooth: S.smooth, style: S.style, shakeCard: S.shakeCard, race: S.race, exp: S.exp })); } catch {}
 }
 function load() {
   try {
@@ -588,12 +620,13 @@ function load() {
     if (typeof p.shakeCard === 'boolean') S.shakeCard = p.shakeCard;
     if (typeof p.race === 'boolean') S.race = p.race && !S.shakeCard;
     if (SMOOTH.some(([k]) => k === p.smooth)) S.smooth = p.smooth;
-    if (STYLES.some(([k]) => k === p.style)) S.style = p.style;
+    if (typeof p.exp === 'boolean') S.exp = p.exp;
+    if (S.exp && STYLES.some(([k]) => k === p.style)) S.style = p.style;
     if (p.syn && DEMO_PRESETS.some(([k]) => k === p.syn.preset)) S.syn.preset = p.syn.preset;
     // simulated tremor is never restored as "on": a real user should never be surprised by fake shake
   } catch {}
 }
 
-resize(); syncButtons(); updateStatus(); restoreDrawing();
+resize(); syncButtons(); updateStatus(); restoreDrawing(); promptCalibrationIfNeeded();
 // test hook for automated checks (no effect on normal use)
 window.__steadyDraw = { S, steadyF, tremorGen, shakeT, redrawInk, redrawAll };

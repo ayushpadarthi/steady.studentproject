@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#1f6b4e">
 <title>Steady Lab</title>
-<link rel="stylesheet" href="css/style.css?v=20">
+<link rel="stylesheet" href="css/style.css?v=22">
 </head>
 <body>
 <header>
@@ -99,9 +99,10 @@
         <pre id="stMetrics" class="metrics"></pre>
         <div id="stRating" hidden>
           <p>How much control did you have? (0 = none, 10 = full)</p>
-          <input type="range" id="ratingSl" min="0" max="10" step="1" value="5">
-          <output id="ratingO">5</output>
-          <button id="btnRate" class="primary">Save rating &amp; continue</button>
+          <div id="ratingBtns" class="rating" role="group" aria-label="Control rating, 0 to 10"></div>
+          <input type="hidden" id="ratingSl" value="">
+          <p class="hint">Chosen: <output id="ratingO">none yet</output></p>
+          <button id="btnRate" class="primary" disabled>Save rating &amp; continue</button>
         </div>
         <div id="stDone" hidden><p><b>Study complete.</b> Download the summary below.</p></div>
         <div class="row">
@@ -143,8 +144,8 @@
     <canvas id="draw"></canvas>
   </section>
 </main>
-<script type="module" src="js/main.js?v=20"></script>
+<script type="module" src="js/main.js?v=22"></script>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
-<script type="module" src="js/sitemenu.js?v=20"></script>
+<script type="module" src="js/sitemenu.js?v=22"></script>
 </body>
 </html>

@@ -114,3 +114,39 @@ export function openCalibration(onDone = () => {}) {
   document.addEventListener('keydown', key, true); window.addEventListener('resize', draw);
   draw(); back.querySelector('button.primary').focus();
 }
+
+// ---------------------------------------------------------------- first-visit prompt
+// A small card (not a blocking dialog) on a device that has no real size yet: every Steady threshold is in mm, so on
+// a tablet or phone the standard guess is about a third off. "Not now" hides it for good on this device; the
+// "Set real size" button in each page's Demo panel / Lab stays available.
+const DISMISS = 'steady.calibration.dismissed';
+const PCSS = `
+.cal-prompt { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(max(16px, env(safe-area-inset-bottom)) + 84px);
+  z-index: 80; width: min(420px, calc(100vw - 24px)); background: #fff; color: #1b1b1f; border: 1px solid #d9d9de; border-radius: 14px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.14); padding: 12px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+  font: 14px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+.cal-prompt p { margin: 0; flex: 1 1 220px; }
+.cal-prompt button { font: inherit; min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid #d9d9de; background: #fff; color: #1b1b1f; cursor: pointer; }
+.cal-prompt button.primary { background: #1f6b4e; border-color: #1f6b4e; color: #fff; font-weight: 600; }
+body.drawing .cal-prompt { opacity: .12; pointer-events: none; }
+`;
+export function promptCalibrationIfNeeded(delayMs = 1200) {
+  let dismissed = false;
+  try { dismissed = !!localStorage.getItem(DISMISS); } catch {}
+  if (saved || dismissed || document.querySelector('.cal-prompt')) return;
+  setTimeout(() => {
+    if (saved || document.querySelector('.cal-prompt')) return;
+    if (!document.getElementById('cal-prompt-css')) { const st = document.createElement('style'); st.id = 'cal-prompt-css'; st.textContent = PCSS; document.head.appendChild(st); }
+    const box = document.createElement('div'); box.className = 'cal-prompt'; box.setAttribute('role', 'region'); box.setAttribute('aria-label', 'Set real size');
+    box.innerHTML = '<p><b>Set real size once.</b> Steady works in millimetres; hold any bank or ID card to the screen so they are real on this device.</p>' +
+      '<button class="primary" data-a="set">Set real size</button><button data-a="no">Not now</button>';
+    box.addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      box.remove();
+      if (b.dataset.a === 'set') openCalibration();
+      else { try { localStorage.setItem(DISMISS, new Date().toISOString()); } catch {} }
+    });
+    document.body.appendChild(box);
+    onCalibrationChange(() => box.remove());
+  }, delayMs);
+}

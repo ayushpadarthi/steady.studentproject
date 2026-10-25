@@ -57,7 +57,7 @@ works in any modern browser, including Safari on iPad.
 
 ## Tests
 Serve `software/` (so `../../shared/test_vectors` is reachable), open any page, then in the console:
-`(await import('/app/tests/filters.test.mjs')).runTests()`. That runs 48 checks:
+`(await import('/app/tests/filters.test.mjs')).runTests()`. That runs 49 checks:
 - every filter, plus stroke semantics;
 - parity with the Python reference vectors, v1-v6 (output, gate, drawing check and zero-lag estimate to about 1e-12);
 - the drawing check keeping a deliberate 3 Hz zigzag;
@@ -75,7 +75,7 @@ screen), used live by every page; without it the standard 96 px/in guess is used
 
 ## Releases
 Pages load files as `?v=N` so browsers never mix old and new code (GitHub Pages caches for 10 minutes). **Bump N in
-every `.html` and every `import` line, and `VERSION` in `sw.js`, when publishing** (currently 20). If you add a file,
+every `.html` and every `import` line, and `VERSION` in `sw.js`, when publishing** (currently 22). If you add a file,
 add it to the list in `sw.js` too.
 
 ## Filters (`js/filters.js`)
@@ -96,6 +96,7 @@ changes, a new study session starts, or a new study condition starts.
 ## Other files
 | File | What |
 |---|---|
+| `js/shakefreq.js` | Check-in shake speed measured from the drawn shake (zero crossings), independent of Steady |
 | `js/sitemenu.js` | Site menu: the "Steady" name at the top left of every page opens a list of all pages |
 | `js/calib.js` | Real-size calibration (mm per CSS px) shared by all pages, and the "match a card" dialog |
 | `js/store.js` | Keeps the current drawing on the device (IndexedDB) |

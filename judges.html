@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#1f6b4e">
 <title>Steady for judges</title>
-<link rel="stylesheet" href="css/info.css?v=20">
+<link rel="stylesheet" href="css/info.css?v=22">
 </head>
 <body>
 <header class="bar"><div class="bar-in">
@@ -29,10 +29,10 @@
   </ul>
 
   <div class="big-num" role="list">
-    <div role="listitem"><b>60 %</b><span>of tremor error removed while drawing (simulated moderate essential tremor, held-out data)</span></div>
-    <div role="listitem"><b>73 %</b><span>removed in the final line, after the pen lifts</span></div>
-    <div role="listitem"><b>17 ms</b><span>delay behind the pen (heavy smoothing: 75 ms)</span></div>
-    <div role="listitem"><b>0.08 mm</b><span>error for a healthy hand, vs 0.10 mm with no filter: not made worse</span></div>
+    <div role="listitem"><b>60 %</b><span>of tremor error removed while drawing (simulated moderate essential tremor, final test on fresh data)</span></div>
+    <div role="listitem"><b>74 %</b><span>removed in the final line, after the pen lifts</span></div>
+    <div role="listitem"><b>18 ms</b><span>delay behind the pen (heavy smoothing: 76 ms)</span></div>
+    <div role="listitem"><b>0.07 mm</b><span>error for a healthy hand, vs 0.10 mm with no filter: not made worse</span></div>
   </div>
 
   <h2 id="try">Try it in one minute</h2>
@@ -63,8 +63,8 @@
   <ol class="flow" aria-label="Steps from pen to line">
     <li><b>1. Pen position</b>about 120 times a second</li>
     <li class="key"><b>2. Rhythm detector</b>19 oscillators from 3 to 12 Hz, tracked by Kalman filters, subtract the tremor with almost no delay</li>
-    <li class="key"><b>3. Gate</b>only cancels when a clear tremor is there, and not when the rhythm looks like deliberate drawing</li>
-    <li><b>4. Line while drawing</b>light 10 Hz finish, 17 ms total delay</li>
+    <li class="key"><b>3. Gate</b>cancels fully only when a clear tremor is there, and not when the rhythm looks like deliberate drawing</li>
+    <li><b>4. Line while drawing</b>light 10 Hz finish, 18 ms total delay</li>
     <li class="key"><b>5. Settling</b>after the pen lifts, the stroke is smoothed both ways (no delay), by an amount set by the measured tremor</li>
   </ol>
   <details><summary>More detail on each part</summary>
@@ -74,7 +74,9 @@
       from the position, which leaves the intended movement without averaging it.</p>
     <p><b>Gate.</b> On a healthy hand there is little rhythm to remove, and trying anyway adds error. So the
       cancellation fades in only when the detected tremor is larger than about 0.1-0.3 mm. We added this after real
-      drawings showed that the ungated filter did nothing useful.</p>
+      drawings showed that the ungated filter did nothing useful. Honest note: v6 reads a healthy hand's tiny tremor as a
+      little bigger, so for a healthy hand the gate is partly on (about a quarter on average in our tests). That does
+      not make healthy drawing worse (0.08 mm vs 0.10 mm with no filter).</p>
     <p><b>Drawing check (v5).</b> A rhythm that is slow (under about 4 Hz) and big (over about 1 mm) is far more likely a
       zigzag you mean to draw than tremor, so Steady leaves it alone.</p>
     <p><b>Settling.</b> While you draw, Steady cannot see the future, so it must stay fast. After pen-up the whole
@@ -84,39 +86,42 @@
   </details>
 
   <h2 id="results">Results</h2>
-  <p>Design criteria were written before testing. Settings were chosen on training data and checked once on held-out
-    data. Simulated drawings with realistic tremor; "error" = average distance in mm between the drawn line and the
-    line the hand meant to draw.</p>
-  <h3>Design criteria (held-out data, current version v6)</h3>
+  <p>Design criteria were written before testing. Settings were chosen on training data. The numbers below are a
+    <b>final test on fresh data</b>: 40 new simulated sessions per kind of tremor, planned and written down before it
+    ran, run once, nothing changed afterwards. "Error" = average distance in mm between the drawn line and the line the
+    hand meant to draw; ± is a 95 % range.</p>
+  <h3>Design criteria (final test, current version v6)</h3>
   <div class="table"><table>
     <thead><tr><th>Criterion (set in advance)</th><th>Target</th><th>Steady</th><th>Pass</th></tr></thead>
     <tbody>
-      <tr><td>Tremor error removed, moderate essential tremor, while drawing</td><td>at least 50 %</td><td class="n">60 % (1.91 to 0.77 mm); 54 % on the literature-matched tremor</td><td class="yes">yes</td></tr>
-      <tr><td>Same, final line after pen-up</td><td>at least 50 %</td><td class="n">73 % (to 0.51 mm); 71 % literature-matched</td><td class="yes">yes</td></tr>
-      <tr><td>Delay behind the pen</td><td>at most 20 ms</td><td class="n">17 ms</td><td class="yes">yes</td></tr>
-      <tr><td>Healthy hand not made worse</td><td>at most 0.10 mm (no filter)</td><td class="n">0.08 mm (final 0.07)</td><td class="yes">yes</td></tr>
-      <tr><td>Fast enough for live drawing</td><td>120+ samples a second</td><td class="n">0.04-0.12 ms per sample</td><td class="yes">yes</td></tr>
+      <tr><td>Tremor error removed, moderate essential tremor, while drawing</td><td>at least 50 %</td><td class="n">60 % ± 1 % (1.99 to 0.80 mm); 52 % ± 2 % on the literature-matched tremor</td><td class="yes">yes</td></tr>
+      <tr><td>Same, final line after pen-up</td><td>at least 50 %</td><td class="n">74 % (to 0.52 mm); 69 % literature-matched</td><td class="yes">yes</td></tr>
+      <tr><td>Delay behind the pen</td><td>at most 20 ms</td><td class="n">18 ms</td><td class="yes">yes</td></tr>
+      <tr><td>Healthy hand not made worse</td><td>at most 0.10 mm (no filter)</td><td class="n">0.07 mm (final 0.06)</td><td class="yes">yes</td></tr>
+      <tr><td>Fast enough for live drawing</td><td>120+ samples a second</td><td class="n">about 0.05-0.12 ms per sample</td><td class="yes">yes</td></tr>
     </tbody>
   </table></div>
 
-  <h3>Every method on the same drawings (moderate essential tremor)</h3>
+  <h3>Every method on the same drawings (moderate essential tremor, final test)</h3>
   <div class="table"><table>
     <thead><tr><th>Method</th><th class="n">Error (mm)</th><th class="n">Delay (ms)</th><th class="n">Healthy hand (mm)</th></tr></thead>
     <tbody>
-      <tr><td>No filter</td><td class="n">1.91</td><td class="n">0</td><td class="n">0.10</td></tr>
-      <tr><td>Moving average, heavy (2 Hz)</td><td class="n">0.93</td><td class="n">75</td><td class="n">0.71</td></tr>
-      <tr><td>Moving average, same delay as Steady (10 Hz)</td><td class="n">1.47</td><td class="n">16</td><td class="n">0.08</td></tr>
-      <tr><td>One-Euro filter (Casiez 2012)</td><td class="n">0.88</td><td class="n">41</td><td class="n">0.50</td></tr>
-      <tr><td>WFLC (Riviere 1996), tuned</td><td class="n">1.28</td><td class="n">15</td><td class="n">0.69</td></tr>
-      <tr><td>BMFLC (Veluvolu 2007), tuned</td><td class="n">0.72</td><td class="n">49</td><td class="n">0.24</td></tr>
-      <tr><td>BMFLC, tuned with delay at most 20 ms</td><td class="n">1.11</td><td class="n">16</td><td class="n">0.23</td></tr>
-      <tr class="us"><td>Steady, while drawing</td><td class="n">0.77</td><td class="n">17</td><td class="n">0.08</td></tr>
-      <tr class="us"><td>Steady, final line</td><td class="n">0.51</td><td class="n">17 while drawing</td><td class="n">0.07</td></tr>
+      <tr><td>No filter</td><td class="n">1.99</td><td class="n">0</td><td class="n">0.10</td></tr>
+      <tr><td>Moving average, heavy (2 Hz)</td><td class="n">0.87</td><td class="n">76</td><td class="n">0.57</td></tr>
+      <tr><td>Moving average, same delay as Steady (10 Hz)</td><td class="n">1.57</td><td class="n">16</td><td class="n">0.08</td></tr>
+      <tr><td>One-Euro filter (Casiez 2012)</td><td class="n">0.91</td><td class="n">45</td><td class="n">0.46</td></tr>
+      <tr><td>WFLC (Riviere 1996), tuned</td><td class="n">0.77</td><td class="n">68</td><td class="n">0.48</td></tr>
+      <tr><td>WFLC, tuned with delay at most 20 ms</td><td class="n">1.23</td><td class="n">11</td><td class="n">0.47</td></tr>
+      <tr><td>BMFLC (Veluvolu 2007), tuned</td><td class="n">0.76</td><td class="n">49</td><td class="n">0.21</td></tr>
+      <tr><td>BMFLC, tuned with delay at most 20 ms</td><td class="n">1.09</td><td class="n">16</td><td class="n">0.20</td></tr>
+      <tr class="us"><td>Steady, while drawing</td><td class="n">0.80</td><td class="n">18</td><td class="n">0.07</td></tr>
+      <tr class="us"><td>Steady, final line</td><td class="n">0.52</td><td class="n">18 while drawing</td><td class="n">0.06</td></tr>
     </tbody>
   </table></div>
-  <p>At the same delay, Steady leaves the least error and is the only method that does not hurt a healthy hand.
-    BMFLC without a delay limit leaves a little less error while drawing, but trails the pen by 49 ms and more than
-    doubles a healthy hand's error: the delay-versus-tremor trade-off this project is about.</p>
+  <p>Among methods with at most 20 ms delay, Steady leaves by far the least error, and it does not hurt a healthy hand.
+    Slower methods get close while drawing (BMFLC 0.76 mm, WFLC 0.77 mm, heavy moving average 0.87 mm) but trail the pen by 49-76 ms,
+    and most make a healthy hand's line worse: the delay-versus-tremor trade-off this project is about. After pen-up,
+    Steady's final line is the most accurate of all.</p>
 
   <h3 id="realistic">Is our simulated tremor realistic?</h3>
   <p>Steady predicts the tremor's rhythm, so a rhythm that changes from beat to beat is harder for it. We checked our
@@ -126,19 +131,23 @@
     literature-matched tremor model (its target fixed before looking at any results), tested every method on both, and
     retuned Steady on training data to follow changing tremor better (v6).</p>
   <div class="table"><table>
-    <thead><tr><th>Literature-matched tremor, moderate essential tremor (held-out)</th><th class="n">Error (mm)</th><th class="n">Delay (ms)</th></tr></thead>
+    <thead><tr><th>Literature-matched tremor, moderate essential tremor (final test)</th><th class="n">Error (mm)</th><th class="n">Delay (ms)</th></tr></thead>
     <tbody>
-      <tr><td>No filter</td><td class="n">1.91</td><td class="n">0</td></tr>
-      <tr><td>Moving average, heavy (2 Hz)</td><td class="n">0.95</td><td class="n">75</td></tr>
-      <tr><td>One-Euro filter</td><td class="n">0.91</td><td class="n">40</td></tr>
-      <tr><td>BMFLC, tuned with delay at most 20 ms</td><td class="n">1.11</td><td class="n">16</td></tr>
-      <tr><td>Steady v5</td><td class="n">0.97</td><td class="n">16</td></tr>
-      <tr class="us"><td>Steady v6, while drawing</td><td class="n">0.87</td><td class="n">17</td></tr>
-      <tr class="us"><td>Steady v6, final line</td><td class="n">0.55</td><td class="n">17 while drawing</td></tr>
+      <tr><td>No filter</td><td class="n">1.98</td><td class="n">0</td></tr>
+      <tr><td>Moving average, heavy (2 Hz)</td><td class="n">0.91</td><td class="n">76</td></tr>
+      <tr><td>One-Euro filter</td><td class="n">0.95</td><td class="n">44</td></tr>
+      <tr><td>WFLC, tuned</td><td class="n">0.82</td><td class="n">67</td></tr>
+      <tr><td>BMFLC, tuned</td><td class="n">0.82</td><td class="n">49</td></tr>
+      <tr><td>BMFLC, tuned with delay at most 20 ms</td><td class="n">1.13</td><td class="n">16</td></tr>
+      <tr class="us"><td>Steady v6, while drawing</td><td class="n">0.96</td><td class="n">18</td></tr>
+      <tr class="us"><td>Steady v6, final line</td><td class="n">0.62</td><td class="n">18 while drawing</td></tr>
     </tbody>
   </table></div>
-  <p>The trade-off we chose: v6's line while drawing is better than v5's, but its final line is a little less smooth
-    (73 % instead of 78 % removed), because its after-pen-up smoothing must switch on later to leave healthy hands alone.</p>
+  <p><b>Honest reading:</b> on this harder, more realistic tremor, slower filters match or beat Steady's line
+    <i>while drawing</i>, because they wait 44-76 ms to see more of the shake. Among filters that stay within 20 ms,
+    Steady is still clearly best, and its final line beats every method. The trade-off we chose for v6: a better line
+    while drawing than v5, but a slightly less smooth final line (74 % instead of 78 % removed), because its after-pen-up
+    smoothing must switch on later to leave healthy hands alone.</p>
 
   <h3>Deliberate zigzags (the v5 fix)</h3>
   <p>Testing our own app, we found that a fast zigzag drawn on purpose was partly erased as if it were tremor.
@@ -187,6 +196,10 @@
       healthy final line had got worse. The same happened with v6: its first held-out run made the healthy final line
       worse (0.18 mm), so the smoothing thresholds were re-picked on training data and a second, disclosed held-out run
       checked every design goal. Every extra look at held-out data is written down.</li>
+    <li><b>Final test on fresh data:</b> because the original held-out data had been looked at several times, we wrote down
+      a new, larger final test (40 new sessions per kind of tremor) before running it, ran it once, and report those
+      numbers above. WFLC and BMFLC were then re-tuned on training data with both tremor models and wider settings (as
+      Steady had been) and run once on the same final data; those fairer numbers are the ones shown.</li>
     <li>The Python reference and the web app give the same answers to within 0.000000001 mm (automated test).</li>
   </ul>
 
@@ -204,7 +217,8 @@
       <tr><td>Steadi-3, GyroGlove</td><td>Wearable stabilisers</td><td>Hardware for the hand; Steady is software for any stylus or finger</td></tr>
     </tbody>
   </table></div>
-  <div class="box"><p><b>What we designed:</b> (1) the gate, which switches cancellation off without clear tremor;
+  <div class="box"><p><b>What we designed:</b> (1) the gate, which scales cancellation by how clear the tremor is (mostly
+    off for a healthy hand: about a quarter on average in our tests, without making it worse);
     (2) the drawing check, which keeps deliberate zigzags; (3) settling after pen-up, with its strength set by the
     measured tremor and limited to the tremor's size; (4) the benchmark: every method, the same drawings, criteria fixed
     in advance.</p></div>
@@ -213,6 +227,19 @@
   <ul>
     <li>The large gains are in simulation. Our simulator is checked against real drawings, but we made both the simulator
       and the filter.</li>
+    <li><b>Which parts of the simulated tremor are sourced:</b> how much its speed changes from beat to beat (matched to
+      di Biase et al., 2017) and its size. Elble and Ellenbogen (2017) measured spiral tremor in essential tremor on a
+      tablet; by their formula our presets match clinical spiral ratings of about 1 (mild), 1.5-2 (moderate) and 2.5-3
+      (severe). The typical patient in their study had about 2 mm peak-to-peak, closer to our <i>mild</i> preset, where
+      Steady removes 58 %. <b>Not sourced:</b> how much the tremor's size changes from beat to beat; we found no published
+      numbers.</li>
+    <li><b>What our error score does not show:</b> it is the distance from the shape the hand meant to draw, so a line that
+      is late but on the right path still scores well. That is why delay is measured and reported separately.</li>
+    <li><b>Delay numbers are the filter's own.</b> Tablets and screens add their own delay (often quoted as tens of
+      milliseconds; we did not measure it) to every method equally, so the felt difference is Steady's 18 ms versus a
+      heavy stabiliser's 76 ms, on top of the device's delay.</li>
+    <li>The "typical stabiliser" in the lag race is a stand-in: a 2 Hz moving average. Stabilisers in drawing apps differ
+      in how they smooth.</li>
     <li>No testing with people yet. That needs approval from our school's review committee first
       (<a href="participants.html">what a session would involve</a>).</li>
     <li>A small, fast wiggle drawn on purpose (faster than about 4 times a second, under 1 mm) cannot be told apart from
@@ -244,6 +271,6 @@
 </main>
 <footer>A student science fair project. Not a medical device. Nothing you draw leaves your device.</footer>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
-<script type="module" src="js/sitemenu.js?v=20"></script>
+<script type="module" src="js/sitemenu.js?v=22"></script>
 </body>
 </html>
