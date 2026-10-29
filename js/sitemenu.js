@@ -3,7 +3,7 @@
 // own styles and works with each page's header. Close with Esc, a tap outside, or the button again.
 const PAGES = [
   ['', [['index.html', 'Home', 'Start page']]],
-  ['Draw', [['draw.html', 'Draw', 'The drawing app with Steady']]],
+  ['Draw', [['draw.html', 'Draw', 'The drawing app with Steady'], ['booth.html', 'Try Steady', 'Booth demo: three versions side by side']]],
   ['Practise and measure', [['trace.html', 'Trace and colour', 'Stay in the lines, get a score'], ['checkin.html', 'Spiral check-in', 'Measure your shake, keep a log']]],
   ['For testing', [['lab.html', 'Lab', 'Compare filters, studies, tremor pen']]],
   ['About the project', [['judges.html', 'For judges', 'Results, how it works, limits'], ['participants.html', 'For participants', 'What a test session involves'], ['testers.html', 'For testers', 'Checklist and report']]],

@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#1f6b4e">
 <title>Steady for judges</title>
-<link rel="stylesheet" href="css/info.css?v=23">
+<link rel="stylesheet" href="css/info.css?v=24">
 </head>
 <body>
 <header class="bar"><div class="bar-in">
@@ -22,7 +22,7 @@
   <p class="lead">A drawing app that removes hand tremor from the line while you draw, without the lag that normal
     stabilisers add. Engineering design project, Technology Enhances the Arts.</p>
   <ul class="toc" aria-label="On this page">
-    <li><a href="#try">Try it</a></li><li><a href="#problem">Problem</a></li><li><a href="#how">How it works</a></li>
+    <li><a href="#not-smoothing">Not just smoothing</a></li><li><a href="#try">Try it</a></li><li><a href="#problem">Problem</a></li><li><a href="#how">How it works</a></li>
     <li><a href="#results">Results</a></li><li><a href="#realistic">Is the tremor realistic?</a></li><li><a href="#iterations">Design iterations</a></li>
     <li><a href="#fair">How we kept it fair</a></li><li><a href="#prior">Prior art</a></li><li><a href="#limits">Limits</a></li>
     <li><a href="#faq">Questions</a></li>
@@ -35,8 +35,36 @@
     <div role="listitem"><b>0.07 mm</b><span>error for a healthy hand, vs 0.10 mm with no filter: not made worse</span></div>
   </div>
 
+  <h2 id="not-smoothing">"Isn't this just a smoothing filter?"</h2>
+  <p>No, and the picture shows why. Think of <b>earplugs versus noise-cancelling headphones</b>. Earplugs (smoothing)
+    muffle everything, including the voice you want to hear. Noise-cancelling headphones listen for the hum, predict
+    it, and subtract only the hum. Steady does that to tremor.</p>
+  <figure class="fig">
+    <img src="img/steady-three-ways.png" width="3000" height="2561" loading="lazy"
+      alt="The same handwriting loops, star and spiral drawn three ways. Your hand, no help: very shaky. Normal smoothing: less shaky but loops crushed and corners rounded, 4 to 6 mm behind the pen. Steady: clean loops, sharp star, round spiral, about 1.5 mm behind the pen.">
+    <figcaption>The same movement, three ways (simulated moderate essential tremor, one random seed fixed before
+      looking). Smoothing can't tell tremor from handwriting, because both are fast, so it crushes the loops: on
+      handwriting it is barely better than no help (1.5 mm vs 1.7 mm). Steady: 0.4 mm. Try it with your own hand on the
+      <a href="booth.html">booth page</a>.</figcaption>
+  </figure>
+  <p>Three things a smoothing filter does not do:</p>
+  <ol class="steps">
+    <li><b>It finds your tremor.</b> A bank of oscillators (3-12 Hz) learns the rhythm of this hand, live, and says
+      what it found ("removing a 6.8 Hz shake"). Smoothing knows nothing about you.</li>
+    <li><b>It removes only that rhythm.</b> It predicts the shake and subtracts it, so the movement you mean is not
+      averaged. That is why it keeps loops and corners, and why it is about 4 times less behind your pen.</li>
+    <li><b>It decides when to stay out of the way.</b> A healthy hand, a slow zigzag or a big colouring scribble is left
+      alone. Smoothing always smooths.</li>
+  </ol>
+  <p>The honest part: at small, fast colouring strokes (about 0.5-1.5 cm, 4-6 per second) a deliberate movement
+    looks exactly like tremor, and no method that only sees the pen position can tell them apart (see
+    <a href="#limits">Limits</a>). Finding where that limit is was one of our results.</p>
+
   <h2 id="try">Try it in one minute</h2>
   <ol class="steps">
+    <li>Open <a href="booth.html">Try Steady</a> and write your name in any box. Your movement is drawn three ways at
+      once: your hand with a simulated tremor, normal smoothing, and Steady, each with its shakiness and how far it is
+      behind your pen. The ring shows where your pen really is.</li>
     <li>Open <a href="draw.html">Draw</a>. Press <b>Demo</b>, turn on <b>Simulate tremor</b> and pick <b>ET moderate</b>.</li>
     <li>Turn on <b>Show the raw, shaky line</b>. Draw a spiral or write your name. Grey is what your hand plus the
       tremor did; colour is what Steady drew. The top line says what Steady detected, for example "Removing a 6.4 Hz shake".</li>
@@ -275,8 +303,9 @@
 
   <h2 id="faq">Questions we expect</h2>
   <details><summary>Isn't this just a smoothing filter?</summary>
-    <p>A smoothing filter averages everything, which causes delay. Steady estimates the tremor rhythm and subtracts only
-      that, so the intended movement is not averaged. The tables compare it with smoothing at the same delay.</p></details>
+    <p>No: see <a href="#not-smoothing">the picture at the top</a>. A smoothing filter averages everything, which causes
+      delay and crushes fast details like handwriting loops. Steady estimates the tremor rhythm and subtracts only that,
+      so the intended movement is not averaged. The tables compare it with smoothing at the same delay.</p></details>
   <details><summary>Why simulation instead of real people?</summary>
     <p>In simulation we know the line the hand meant to draw, so we can measure error exactly, and every method sees the
       same drawings. We also tested on public real drawings. Testing with people needs approval, which we are following.</p></details>
@@ -295,6 +324,6 @@
 </main>
 <footer>A student science fair project. Not a medical device. Nothing you draw leaves your device.</footer>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
-<script type="module" src="js/sitemenu.js?v=23"></script>
+<script type="module" src="js/sitemenu.js?v=24"></script>
 </body>
 </html>

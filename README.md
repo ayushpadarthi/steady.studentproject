@@ -11,6 +11,7 @@ Live: https://ayushpadarthi.github.io/steady.studentproject/
 |---|---|---|
 | `index.html` | Start page | (inline CSS) |
 | **`draw.html`** | **The product:** full-screen drawing with the Steady filter | `js/draw.js`, `css/draw.css` |
+| `booth.html` | "Try Steady" booth demo: one movement drawn three ways at once (hand with simulated tremor, normal smoothing, Steady) with shakiness and lag numbers; Save picture | `js/booth.js`, `css/booth.css` |
 | `trace.html` | Measurement task: trace (5 mm lane) and colouring pages, scored for the screen line and the raw hand | `js/trace.js` |
 | `checkin.html` | Measurement task: spiral check-in with shake size/speed and a dated log on the device | `js/checkin.js` |
 | `lab.html` | Evidence tool: compare filters on one drawing, study mode with CSV export, tremor-pen link + truth meter | `js/main.js`, `css/style.css` |

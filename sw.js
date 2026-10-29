@@ -2,15 +2,15 @@
 // app keeps working with bad or no Wi-Fi (for example at the fair). Network first, so updates arrive as soon as
 // there is a connection; the stored copy is used when the network fails or takes longer than 3 s.
 // VERSION must match the ?v=N used by the pages (bump both when publishing).
-const VERSION = 23;
+const VERSION = 24;
 const CACHE = `steady-v${VERSION}`;
 const q = `?v=${VERSION}`;
 const FILES = [
-  './', 'index.html', 'draw.html', 'trace.html', 'checkin.html', 'lab.html', 'judges.html', 'participants.html', 'testers.html',
+  './', 'index.html', 'draw.html', 'trace.html', 'checkin.html', 'lab.html', 'judges.html', 'participants.html', 'testers.html', 'booth.html',
   'manifest.webmanifest',
-  'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
-  ...['css/draw.css', 'css/pages.css', 'css/style.css', 'css/info.css'].map((f) => f + q),
-  ...['calib', 'checkin', 'compare', 'draw', 'filters', 'main', 'pad', 'pagekit', 'penmeter', 'replay', 'serial', 'settle',
+  'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'img/steady-three-ways.png',
+  ...['css/draw.css', 'css/pages.css', 'css/style.css', 'css/info.css', 'css/booth.css'].map((f) => f + q),
+  ...['booth', 'calib', 'checkin', 'compare', 'draw', 'filters', 'main', 'pad', 'pagekit', 'penmeter', 'replay', 'serial', 'settle',
     'shakefreq', 'shakestyle', 'sitemenu', 'store', 'study', 'tasks', 'testers', 'trace', 'tremor'].map((f) => `js/${f}.js${q}`),
 ];
 
