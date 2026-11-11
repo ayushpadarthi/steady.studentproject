@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#1f6b4e">
 <title>Try Steady</title>
-<link rel="stylesheet" href="css/booth.css?v=24">
+<link rel="stylesheet" href="css/booth.css?v=25">
 </head>
 <body>
 <header class="bar">
@@ -41,11 +41,12 @@
   <p>All three boxes draw the <b>same</b> movement at the same moment. The small ring is where your pen really is.
     <b>Shakiness</b>: how far the line wanders from the path you meant (mm). <b>Behind your pen</b>: how far the line trails the pen while you move (mm). When you lift the pen, Steady tidies the
     stroke it just drew, as the drawing app does.
-    The shake is simulated from published tremor data; a real hand with tremor can use "No tremor added".</p>
+    The shake is simulated from published tremor data, made mostly back-and-forth for the booth (the test results
+    used a slightly rounder version); a real hand with tremor can use "No tremor added".</p>
 </footer>
 
-<script type="module" src="js/booth.js?v=24"></script>
-<script type="module" src="js/sitemenu.js?v=24"></script>
+<script type="module" src="js/booth.js?v=25"></script>
+<script type="module" src="js/sitemenu.js?v=25"></script>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
 </body>
 </html>
