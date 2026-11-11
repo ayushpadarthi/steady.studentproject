@@ -1,13 +1,13 @@
 // Steady drawing app. Uses the SAME filter code as the lab (js/filters.js), so study results apply to it.
-import { Filter2D } from './filters.js?v=25';
-import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=25';
-import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp, settle } from './settle.js?v=25';
-import { shakePeriods, shakeSpectrum, frequencyFromPeriods } from './shakefreq.js?v=25';
-import { openReplay } from './replay.js?v=25';
-import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=25';
+import { Filter2D } from './filters.js?v=26';
+import { lookPreset, makeLookTremor, SpeedEstimator, PAUSE_S } from './tremor.js?v=26';
+import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp, settle } from './settle.js?v=26';
+import { shakePeriods, shakeSpectrum, frequencyFromPeriods } from './shakefreq.js?v=26';
+import { openReplay } from './replay.js?v=26';
+import { ShakeTracker, STYLES, KEEP, pulseWidth, dotRadius, hatchLenMm } from './shakestyle.js?v=26';
 // MM_PER_PX: the device's real size (js/calib.js); the filter's parameters are in millimetres
-import { MM_PER_PX, onCalibrationChange, openCalibration, calibrationLabel, promptCalibrationIfNeeded } from './calib.js?v=25';
-import { saveDrawing, loadDrawing } from './store.js?v=25';
+import { MM_PER_PX, onCalibrationChange, openCalibration, calibrationLabel, promptCalibrationIfNeeded } from './calib.js?v=26';
+import { saveDrawing, loadDrawing } from './store.js?v=26';
 
 const $ = (id) => document.getElementById(id);
 
@@ -61,7 +61,7 @@ const RACE_COLOR = 'rgba(47,143,206,.6)';
 const s0Race = () => ({ liveS: 0, liveR: 0, sumS: 0, sumR: 0, n: 0, done: false });
 // Same speed-dependent tremor generator as the lab (one instance, continuous in time across strokes).
 // Seeded differently on every page load, so the demo shake is never the same twice.
-const tremorGen = makeTremor(S.syn.preset, {}, (Date.now() ^ Math.floor(Math.random() * 2 ** 31)) >>> 0), speedEst = new SpeedEstimator(0.08);
+const tremorGen = makeLookTremor(S.syn.preset, {}, (Date.now() ^ Math.floor(Math.random() * 2 ** 31)) >>> 0), speedEst = new SpeedEstimator(0.08);
 
 // ---------------------------------------------------------------- canvases
 const ink = $('ink'), ghost = $('ghost'), race = $('race');
@@ -183,6 +183,8 @@ function ingest(ev) {
   const t = (ev.__testT ?? ev.timeStamp) / 1000; // __testT: synthetic events in automated checks only
   if (!(t > S.lastT)) return; // duplicate / out-of-order events
   S.lastT = t;
+  S.lastEv = { clientX: ev.clientX, clientY: ev.clientY, pressure: ev.pressure, pointerType: ev.pointerType };
+  S.testClock = ev.__testT !== undefined;
   const r = ink.getBoundingClientRect();
   let xm = (ev.clientX - r.left) * MM_PER_PX, ym = (ev.clientY - r.top) * MM_PER_PX;
   const penX = xm, penY = ym;             // where the pen is (before any simulated tremor): the lag race measures from here
@@ -252,6 +254,12 @@ ink.addEventListener('pointermove', (e) => {
   const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
   for (const ce of (evs.length ? evs : [e])) ingest(ce);
 });
+// Simulated tremor only: a finger resting on the screen sends no events, so feed the last position again (shake goes on).
+setInterval(() => {
+  if (!S.cur || !S.syn.on || S.testClock || !S.lastEv) return;
+  const now = performance.now();
+  if (now / 1000 - S.lastT > PAUSE_S) ingest({ ...S.lastEv, timeStamp: now });
+}, 8);
 function endStroke(e) {
   if (e.pointerId !== S.pointerId) return;
   S.pointerId = null;
@@ -458,7 +466,7 @@ for (const [k, name, note] of DEMO_PRESETS) {
   b.className = 'preset'; b.dataset.k = k; b.setAttribute('aria-pressed', 'false');
   b.innerHTML = '<span class="p-name"></span><span class="p-note"></span>';
   b.firstChild.textContent = name; b.lastChild.textContent = note;
-  b.addEventListener('click', () => { S.syn.preset = k; tremorGen.p = { ...PRESETS[k] }; syncButtons(); });
+  b.addEventListener('click', () => { S.syn.preset = k; tremorGen.p = lookPreset(k); syncButtons(); });
   $('presetList').appendChild(b);
 }
 $('replayBtn').onclick = replayLast;

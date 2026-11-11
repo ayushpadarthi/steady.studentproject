@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#1f6b4e">
 <title>Steady for judges</title>
-<link rel="stylesheet" href="css/info.css?v=25">
+<link rel="stylesheet" href="css/info.css?v=26">
 </head>
 <body>
 <header class="bar"><div class="bar-in">
@@ -44,7 +44,7 @@
       alt="The same handwriting loops, star and spiral drawn three ways. Your hand, no help: very shaky. Normal smoothing: less shaky but loops crushed and corners rounded, 4 to 6 mm behind the pen. Steady: clean loops, sharp star, round spiral, about 1.5 mm behind the pen.">
     <figcaption>The same movement, three ways (simulated moderate essential tremor, one random seed fixed before
       looking). Smoothing can't tell tremor from handwriting, because both are fast, so it crushes the loops: on
-      handwriting it is barely better than no help (1.5 mm vs 1.7 mm). Steady: 0.4 mm. Try it with your own hand on the
+      handwriting it is no better than no help (1.5 mm vs 1.5 mm). Steady: 0.3 mm. Try it with your own hand on the
       <a href="booth.html">booth page</a>.</figcaption>
   </figure>
   <p>Three things a smoothing filter does not do:</p>
@@ -159,7 +159,10 @@
     one beat to the next; di Biase et al., <i>Brain</i>, 2017) is 1.3-1.9 Hz for essential tremor. Our simulator scored
     0.84-1.04 Hz, so real essential tremor is even <b>less</b> steady than we had assumed. We built a second,
     literature-matched tremor model (its target fixed before looking at any results), tested every method on both, and
-    retuned Steady on training data to follow changing tremor better (v6).</p>
+    retuned Steady on training data to follow changing tremor better (v6).
+    A tester also said our shake <i>looked</i> fake: it moved the pen in small ovals, which drew curly loops. Real
+    essential tremor mostly shakes back and forth, so the pictures and the try-it pages now use a flatter, back-and-forth
+    version. The numbers on this page are from the original (rounder) version.</p>
   <div class="table"><table>
     <thead><tr><th>Literature-matched tremor, moderate essential tremor (final test)</th><th class="n">Error (mm)</th><th class="n">Delay (ms)</th></tr></thead>
     <tbody>
@@ -324,6 +327,6 @@
 </main>
 <footer>A student science fair project. Not a medical device. Nothing you draw leaves your device.</footer>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
-<script type="module" src="js/sitemenu.js?v=25"></script>
+<script type="module" src="js/sitemenu.js?v=26"></script>
 </body>
 </html>

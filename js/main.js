@@ -1,12 +1,12 @@
 // Steady app: drawing canvas, live filters, synthetic tremor, study mode, optional serial.
-import { Filter2D, TremorTracker } from './filters.js?v=25';
-import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=25';
-import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=25';
-import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=25';
-import { PenMeter } from './penmeter.js?v=25';
-import { PRESETS, PRESET_ORDER, makeTremor, SpeedEstimator } from './tremor.js?v=25';
-import { openCompare } from './compare.js?v=25';
-import { MM_PER_PX, calibration, setMmPerPx, onCalibrationChange, openCalibration, promptCalibrationIfNeeded } from './calib.js?v=25';
+import { Filter2D, TremorTracker } from './filters.js?v=26';
+import { makeTemplate, TASKS, TASK_HELP, spiralRadialErrors, errStats, lineStraightness, pathLength } from './tasks.js?v=26';
+import { sanitizeId, rowForParticipant, orderForRow, trialCsv, trialFilename, summaryCsv, download } from './study.js?v=26';
+import { SteadySerial, ImuPlot, serialSupported } from './serial.js?v=26';
+import { PenMeter } from './penmeter.js?v=26';
+import { PRESETS, PRESET_ORDER, lookPreset, makeLookTremor, SpeedEstimator } from './tremor.js?v=26';
+import { openCompare } from './compare.js?v=26';
+import { MM_PER_PX, calibration, setMmPerPx, onCalibrationChange, openCalibration, promptCalibrationIfNeeded } from './calib.js?v=26';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('draw'), ctx = canvas.getContext('2d');
@@ -19,7 +19,7 @@ const S = {
   mon: new TremorTracker(),
   strokes: [], cur: null, drawing: false, lastT: -Infinity,
   syn: { on: false, preset: 'et_moderate', custom: false, hz: PRESETS.et_moderate.f0, mm: PRESETS.et_moderate.amp },
-  gen: makeTremor('et_moderate', {}, 20240607), speed: new SpeedEstimator(0.08), // one generator, continuous in time (never restarted per stroke)
+  gen: makeLookTremor('et_moderate', {}, 20240607), speed: new SpeedEstimator(0.08), // one generator, continuous in time (never restarted per stroke)
   rec: [], recCur: null,
   lag: { ms: 0, ok: false, hist: [] }, fs: 0,
   guide: 'none', template: null, trial: null, study: null,
@@ -182,7 +182,7 @@ const selP = $('synPreset');
 for (const k of PRESET_ORDER) selP.add(new Option(PRESETS[k].name, k));
 const optCustom = new Option('Custom', 'custom'); optCustom.hidden = true; selP.add(optCustom);
 const clampN = (v, lo, hi, d) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
-function applyGen() { S.gen.p = { ...PRESETS[S.syn.preset], f0: S.syn.hz, amp: S.syn.mm }; } // keeps phase/OU state: continuous in time
+function applyGen() { S.gen.p = lookPreset(S.syn.preset, { f0: S.syn.hz, amp: S.syn.mm }); } // keeps phase/OU state: continuous in time
 function synUi() {
   S.syn.on = $('synOn').checked;
   if (S.syn.custom) { optCustom.hidden = false; optCustom.text = `Custom (based on ${PRESETS[S.syn.preset].name})`; selP.value = 'custom'; }

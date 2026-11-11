@@ -5,10 +5,10 @@
 //   live = what Steady drew while the pen was down
 //   pts  = the final line on screen (live, settled after pen-up when Smoothing is on; raw when Steady is off)
 // All coordinates are CSS pixels on the canvas.
-import { Filter2D } from './filters.js?v=25';
-import { makeTremor, SpeedEstimator, PRESETS } from './tremor.js?v=25';
-import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=25';
-import { MM_PER_PX, onCalibrationChange } from './calib.js?v=25';
+import { Filter2D } from './filters.js?v=26';
+import { makeLookTremor, lookPreset, SpeedEstimator, PAUSE_S } from './tremor.js?v=26';
+import { adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=26';
+import { MM_PER_PX, onCalibrationChange } from './calib.js?v=26';
 
 export { MM_PER_PX }; // live: follows the device's real-size calibration (js/calib.js)
 export const SMOOTH_K = { off: null, smooth: 0.5, extra: 0.3 };
@@ -23,11 +23,17 @@ export function createPad(ink, ghost, opts = {}) {
     onEnd: opts.onEnd || (() => {}), onStart: opts.onStart || (() => {}),
   };
   pad.filter = new Filter2D('steady');
-  pad.tremor = makeTremor(pad.syn.preset, {}, (Date.now() ^ Math.floor(Math.random() * 2 ** 31)) >>> 0);
+  pad.tremor = makeLookTremor(pad.syn.preset, {}, (Date.now() ^ Math.floor(Math.random() * 2 ** 31)) >>> 0);
   const speed = new SpeedEstimator(0.08);
-  let cur = null, pointerId = null, sawPen = false, lastT = -Infinity;
+  let cur = null, pointerId = null, sawPen = false, lastT = -Infinity, lastEv = null, testClock = false;
+  // Simulated tremor only: a finger resting on the screen sends no events, so feed the last position again.
+  setInterval(() => {
+    if (!cur || !pad.syn.on || testClock || !lastEv) return;
+    const now = performance.now();
+    if (now / 1000 - lastT > PAUSE_S) ingest({ ...lastEv, timeStamp: now });
+  }, 8);
 
-  pad.setPreset = (k) => { pad.syn.preset = k; pad.tremor.p = { ...PRESETS[k] }; };
+  pad.setPreset = (k) => { pad.syn.preset = k; pad.tremor.p = lookPreset(k); };
 
   function seg(ctx, p0, p1, p2, color, width) {
     const m0 = p0 ? [(p0.x + p1.x) / 2, (p0.y + p1.y) / 2] : [p1.x, p1.y];
@@ -69,7 +75,7 @@ export function createPad(ink, ghost, opts = {}) {
   function ingest(ev) {
     const t = (ev.__testT ?? ev.timeStamp) / 1000; // __testT: synthetic events in automated checks only
     if (!(t > lastT)) return;
-    lastT = t;
+    lastT = t; lastEv = { clientX: ev.clientX, clientY: ev.clientY }; testClock = ev.__testT !== undefined;
     const r = ink.getBoundingClientRect();
     let xm = (ev.clientX - r.left) * MM_PER_PX, ym = (ev.clientY - r.top) * MM_PER_PX;
     const spd = speed.update(t, xm, ym);

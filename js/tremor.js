@@ -28,6 +28,20 @@ export const PRESETS = {
 };
 export const PRESET_ORDER = ['healthy', 'et_mild', 'et_moderate', 'et_severe', 'pd_rest', 'sine'];
 
+// Look of the simulated tremor on the pages (2026-11-11): a tester said the shake looked fake. With ecc 0.35 the
+// oval motion draws curly loops at writing speed; essential and Parkinson's tremor mostly shake back and forth
+// along one (wandering) axis, so the pages use ecc 0.1 for those presets. PRESETS stay as tested (final-test
+// numbers, Python parity); 'healthy' and 'sine' are unchanged.
+export const LOOK_ECC = 0.1;
+export const lookPreset = (k, overrides = {}) =>
+  ({ ...PRESETS[k], ...(['healthy', 'sine'].includes(k) ? {} : { ecc: LOOK_ECC }), ...overrides });
+/** Like makeTremor, with the pages' look. */
+export const makeLookTremor = (k, overrides = {}, seed = 0) => new TremorGenerator(lookPreset(k, overrides), seed);
+
+/** A finger resting on the screen sends no pointer events; while the simulated tremor is on, the pages feed the
+ *  last pen position again after this long (s) so the shake goes on, as a real hand's does. */
+export const PAUSE_S = 0.12;
+
 /** Small seedable PRNG: mulberry32 uniform + Box-Muller normal. */
 export function makeRng(seed = 0) {
   let a = (seed >>> 0) || 0x9e3779b9, spare = null;

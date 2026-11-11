@@ -7,11 +7,11 @@
 //   Behind your pen = mean distance the line trails the pen along the direction of movement (tremor averages out)
 // When the pen lifts, Steady's stroke settles exactly as in the drawing app ("Smooth" mode), and Shakiness then
 // scores that final line: it is what stays on the page. Behind your pen is always measured while drawing.
-import { Filter2D } from './filters.js?v=25';
-import { PRESETS, makeTremor, SpeedEstimator } from './tremor.js?v=25';
-import { settle, adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=25';
-import { shakePeriods, shakeSpectrum, frequencyFromPeriods } from './shakefreq.js?v=25';
-import { MM_PER_PX } from './calib.js?v=25';
+import { Filter2D } from './filters.js?v=26';
+import { lookPreset, makeLookTremor, SpeedEstimator, PAUSE_S } from './tremor.js?v=26';
+import { settle, adaptiveParams, adaptiveSettle, clampTo, clampMm, tremorAmp } from './settle.js?v=26';
+import { shakePeriods, shakeSpectrum, frequencyFromPeriods } from './shakefreq.js?v=26';
+import { MM_PER_PX } from './calib.js?v=26';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const KINDS = ['raw', 'ema', 'steady'];
@@ -21,12 +21,6 @@ const MOVING_MM_S = 20;   // "behind your pen" only counts while the pen is real
 const NEAR_S = 0.5;       // shakiness: nearest point on the meant path within +-0.5 s (keeps it fast)
 const CLAIM_MM = 0.4;     // same threshold as the drawing app's status line
 const SETTLE_K = 0.5, SETTLE_BASE = 8.0, SETTLE_MS = 350;   // the drawing app's default "Smooth" setting
-// Booth-only look (2026-11-11): a tester said the shake looked fake. The presets' oval motion (ecc 0.35) draws neat
-// curly loops at writing speed; essential tremor mostly shakes back and forth along one (wandering) axis, so the
-// booth uses ecc 0.1. The test results keep the original presets. PAUSE_S: no pointer event for this long = the
-// finger is resting, so the shake keeps going on its own clock, as a real hand does.
-const BOOTH_ECC = 0.1, PAUSE_S = 0.12;
-const handPreset = (k) => ({ ...PRESETS[k], ecc: BOOTH_ECC });
 
 const S = {
   hand: 'et_moderate', strokes: [], cur: null, pointerId: null, lastT: -Infinity, dirty: true,
@@ -40,7 +34,7 @@ const speedEst = new SpeedEstimator(0.08);
 function freshFilters() {
   steadyF = new Filter2D('steady');   // persistent between strokes, like the drawing app: it keeps learning the tremor
   emaF = new Filter2D('ema');
-  tremorGen = makeTremor(S.hand === 'none' ? 'et_moderate' : S.hand, { ecc: BOOTH_ECC }, (Date.now() ^ Math.floor(Math.random() * 2 ** 31)) >>> 0);
+  tremorGen = makeLookTremor(S.hand === 'none' ? 'et_moderate' : S.hand, {}, (Date.now() ^ Math.floor(Math.random() * 2 ** 31)) >>> 0);
 }
 freshFilters();
 
@@ -249,7 +243,7 @@ for (const [k, name] of HANDS) {
   const b = document.createElement('button'); b.dataset.k = k; b.textContent = name;
   b.addEventListener('click', () => {
     S.hand = k;
-    if (k !== 'none') tremorGen.p = handPreset(k);
+    if (k !== 'none') tremorGen.p = lookPreset(k);
     syncHand();
   });
   handBox.appendChild(b);
